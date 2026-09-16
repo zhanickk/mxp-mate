@@ -1,4 +1,5 @@
 // High-level task dispatch logic shared by server functions, the webhook and the cron route.
+import type { Database } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   keyboardFor,
@@ -8,6 +9,8 @@ import {
   almaty,
   escapeHtml,
 } from "./telegram.server";
+
+type AssignmentStatus = Database["public"]["Enums"]["assignment_status"];
 
 export type AssignmentRow = {
   id: string;
@@ -61,7 +64,7 @@ export async function logActivity(assignmentId: string, memberId: string | null,
 /** Sends (or re-sends) the JD DM for each assignment id. */
 export async function dispatchAssignments(
   ids: string[],
-  opts: { prefix?: string; resend?: boolean } = {},
+  opts: { prefix?: string | undefined; resend?: boolean | undefined } = {},
 ): Promise<{ sent: number; failed: string[] }> {
   const rows = await loadAssignments(ids);
   let sent = 0;
@@ -89,7 +92,9 @@ export async function dispatchAssignments(
       prefix: opts.prefix,
     });
 
-    const nextStatus = opts.resend && row.status !== "not_delivered" ? row.status : "sent";
+    const nextStatus = (
+      opts.resend && row.status !== "not_delivered" ? row.status : "sent"
+    ) as AssignmentStatus;
     const res = await sendMessage(member.telegram_chat_id, text, keyboardFor(nextStatus, row.id));
 
     if (res.ok && res.result) {
@@ -97,7 +102,7 @@ export async function dispatchAssignments(
       await supabaseAdmin
         .from("task_assignments")
         .update({
-          status: nextStatus === "not_delivered" ? "sent" : nextStatus,
+          status: nextStatus === "not_delivered" ? ("sent" as const) : nextStatus,
           telegram_message_id: res.result.message_id,
           sent_at: new Date().toISOString(),
         })
@@ -121,7 +126,7 @@ export async function dispatchAssignments(
 /** Short reminder DM for a single assignment. */
 export async function sendReminderFor(
   assignmentId: string,
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<{ ok: boolean; reason?: string | undefined }> {
   const [row] = await loadAssignments([assignmentId]);
   if (!row?.tasks) return { ok: false, reason: "Назначение не найдено" };
   const chatId = row.members?.telegram_chat_id;

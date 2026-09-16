@@ -131,10 +131,10 @@ export const STATUS_LINE: Record<string, string> = {
 
 export function taskMessage(opts: {
   title: string;
-  description?: string | null;
-  teamName?: string | null;
+  description?: string | null | undefined;
+  teamName?: string | null | undefined;
   deadline: string;
-  prefix?: string;
+  prefix?: string | undefined;
 }): string {
   const lines = [
     `${opts.prefix ?? "📌 <b>Новая джейдишка</b>"}`,
