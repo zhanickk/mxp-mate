@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicCronTickRouteImport } from './routes/api/public/cron-tick'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronTickRoute = ApiPublicCronTickRouteImport.update({
+  id: '/api/public/cron-tick',
+  path: '/api/public/cron-tick',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTelegramWebhookRoute =
@@ -26,27 +32,32 @@ const ApiPublicTelegramWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/cron-tick': typeof ApiPublicCronTickRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/cron-tick': typeof ApiPublicCronTickRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/cron-tick': typeof ApiPublicCronTickRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/telegram-webhook'
+  fullPaths: '/' | '/api/public/cron-tick' | '/api/public/telegram-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/telegram-webhook'
-  id: '__root__' | '/' | '/api/public/telegram-webhook'
+  to: '/' | '/api/public/cron-tick' | '/api/public/telegram-webhook'
+  id:
+    '__root__' | '/' | '/api/public/cron-tick' | '/api/public/telegram-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicCronTickRoute: typeof ApiPublicCronTickRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
 
@@ -57,6 +68,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron-tick': {
+      id: '/api/public/cron-tick'
+      path: '/api/public/cron-tick'
+      fullPath: '/api/public/cron-tick'
+      preLoaderRoute: typeof ApiPublicCronTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/telegram-webhook': {
@@ -71,6 +89,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicCronTickRoute: ApiPublicCronTickRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }
 export const routeTree = rootRouteImport
