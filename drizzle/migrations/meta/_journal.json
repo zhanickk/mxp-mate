@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789583890882,
+      "tag": "0000_mxp_tasks_core_schema",
+      "breakpoints": true
+    }
+  ]
 }
