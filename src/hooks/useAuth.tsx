@@ -17,6 +17,8 @@ type AuthState = {
   profile: Profile | null;
   loading: boolean;
   isVp: boolean;
+  /** true when the account has a staff role (approved by VP). */
+  approved: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -27,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [approved, setApproved] = useState(false);
 
   async function loadProfile() {
     const { data, error } = await supabase.rpc("ensure_profile", {});
@@ -35,8 +38,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
-    const row = Array.isArray(data) ? data[0] : data;
-    setProfile((row as Profile) ?? null);
+    const row = (Array.isArray(data) ? data[0] : data) as Profile | undefined;
+    setProfile(row ?? null);
+    if (row) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", row.id);
+      setApproved((roles ?? []).length > 0);
+    } else {
+      setApproved(false);
+    }
   }
 
   useEffect(() => {
@@ -69,7 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     profile,
     loading,
-    isVp: profile?.role === "vp",
+    isVp: approved && profile?.role === "vp",
+    approved,
     refreshProfile: loadProfile,
     signOut: async () => {
       await supabase.auth.signOut();

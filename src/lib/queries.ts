@@ -36,8 +36,7 @@ export function useMembers() {
 export function useTemplates() {
   return useQuery({
     queryKey: ["templates"],
-    queryFn: () =>
-      must<Template[]>(supabase.from("task_templates").select("*").order("title")),
+    queryFn: () => must<Template[]>(supabase.from("task_templates").select("*").order("title")),
   });
 }
 
@@ -73,11 +72,104 @@ export function initials(name: string) {
     .join("");
 }
 
-export const CATEGORIES = [
-  "LCM",
-  "Instagram",
-  "Дни рождения",
-  "Engagement",
-  "Бот",
-  "Другое",
-];
+export const CATEGORIES = ["LCM", "Instagram", "Дни рождения", "Engagement", "Бот", "Другое"];
+
+export type Profile = Tables<"profiles">;
+export type ActivityRow = Tables<"activity_log">;
+
+export type FullAssignment = Assignment & {
+  members: Pick<Member, "id" | "full_name" | "team_id" | "position" | "telegram_chat_id"> | null;
+};
+
+export function useProfiles() {
+  return useQuery({
+    queryKey: ["profiles"],
+    queryFn: () => must<Profile[]>(supabase.from("profiles").select("*").order("created_at")),
+  });
+}
+
+export function useSettings() {
+  return useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const rows = await must<Tables<"app_settings">[]>(supabase.from("app_settings").select("*"));
+      return Object.fromEntries(rows.map((r) => [r.key, r.value ?? ""])) as Record<string, string>;
+    },
+  });
+}
+
+export function useTask(taskId: string) {
+  return useQuery({
+    queryKey: ["task", taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("id", taskId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+  });
+}
+
+export function useTaskAssignments(taskId: string) {
+  return useQuery({
+    queryKey: ["assignments", "task", taskId],
+    queryFn: () =>
+      must<FullAssignment[]>(
+        supabase
+          .from("task_assignments")
+          .select("*, members(id, full_name, team_id, position, telegram_chat_id)")
+          .eq("task_id", taskId)
+          .order("created_at"),
+      ),
+  });
+}
+
+export function useActivity(assignmentIds: string[]) {
+  return useQuery({
+    queryKey: ["activity", assignmentIds],
+    enabled: assignmentIds.length > 0,
+    queryFn: () =>
+      must<ActivityRow[]>(
+        supabase
+          .from("activity_log")
+          .select("*")
+          .in("assignment_id", assignmentIds)
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ),
+  });
+}
+
+/** Aggregate status for a task from its assignments. */
+export function aggregateStatus(rows: { status: string }[]): string {
+  if (rows.length === 0) return "sent";
+  const s = rows.map((r) => r.status);
+  if (s.every((x) => x === "done")) return "done";
+  if (s.includes("help_needed")) return "help_needed";
+  if (s.includes("overdue")) return "overdue";
+  if (s.some((x) => x === "accepted" || x === "done")) return "accepted";
+  if (s.every((x) => x === "not_delivered")) return "not_delivered";
+  return "sent";
+}
+
+export const POSITION_LABEL: Record<string, string> = {
+  vp: "VP MXP",
+  team_leader: "Team Leader",
+  manager: "Manager",
+  member: "Member",
+};
+
+export function botLink(botUsername: string | undefined, inviteCode: string) {
+  const u = (botUsername ?? "").replace(/^@/, "");
+  return u ? `https://t.me/${u}?start=${inviteCode}` : "";
+}
+
+export function useStaffRoles() {
+  return useQuery({
+    queryKey: ["user_roles"],
+    queryFn: () => must<Tables<"user_roles">[]>(supabase.from("user_roles").select("*")),
+  });
+}

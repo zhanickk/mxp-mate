@@ -64,10 +64,7 @@ async function runTick() {
         chatId,
         `⏰ Напоминание: «${escapeHtml(row.tasks.title)}» — дедлайн ${almaty(deadline)} (Астана)`,
       );
-      await supabaseAdmin
-        .from("task_assignments")
-        .update({ reminder_sent: true })
-        .eq("id", row.id);
+      await supabaseAdmin.from("task_assignments").update({ reminder_sent: true }).eq("id", row.id);
       await logActivity(row.id, row.member_id, "Отправлено напоминание о дедлайне");
       summary.reminders += 1;
       await sleep(100);
@@ -122,9 +119,12 @@ async function runTick() {
       .insert(inserts)
       .select("id");
 
-    await dispatchAssignments((newAssignments ?? []).map((a) => a.id), {
-      prefix: "🔁 <b>Еженедельная джейдишка</b>",
-    });
+    await dispatchAssignments(
+      (newAssignments ?? []).map((a) => a.id),
+      {
+        prefix: "🔁 <b>Еженедельная джейдишка</b>",
+      },
+    );
     summary.recurring += 1;
   }
 
@@ -137,8 +137,18 @@ async function runTick() {
     }).format(now),
   );
 
-  if (almatyHour === 9) {
-    const target = new Date(now.getTime() + 3 * 86_400_000);
+  const almatyToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Almaty" }).format(now);
+  const { data: lastNotice } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "birthday_notice_date")
+    .maybeSingle();
+
+  if (almatyHour >= 9 && lastNotice?.value !== almatyToday) {
+    await supabaseAdmin
+      .from("app_settings")
+      .upsert({ key: "birthday_notice_date", value: almatyToday, updated_at: now.toISOString() });
+    const target = new Date(now.getTime() + 5 * 3600 * 1000 + 3 * 86_400_000);
     const mm = String(target.getUTCMonth() + 1).padStart(2, "0");
     const dd = String(target.getUTCDate()).padStart(2, "0");
 
@@ -182,13 +192,35 @@ async function runTick() {
   return summary;
 }
 
+/** Accepts either Lovable's managed cron secret or the pg_cron secret stored in app_settings. */
+async function isAuthorized(request: Request): Promise<boolean> {
+  const token = /^Bearer ([^\s,]+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
+  if (!token) return false;
+
+  if (process.env["LOVABLE_CRON_SECRET"]) {
+    const { authenticateCronRequest } = await import("@/integrations/supabase/cron-auth");
+    if ((await authenticateCronRequest(request)) === null) return true;
+  }
+
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "cron_secret")
+    .maybeSingle();
+  if (!data?.value) return false;
+
+  const { createHash, timingSafeEqual } = await import("node:crypto");
+  const digest = (v: string) => createHash("sha256").update(v, "utf8").digest();
+  return timingSafeEqual(digest(token), digest(data.value));
+}
+
 export const Route = createFileRoute("/api/public/cron-tick")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { authenticateCronRequest } = await import("@/integrations/supabase/cron-auth");
-        const denied = await authenticateCronRequest(request);
-        if (denied) return denied;
+        if (!(await isAuthorized(request))) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         try {
           const summary = await runTick();
           return Response.json({ ok: true, ...summary });

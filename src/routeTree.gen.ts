@@ -11,6 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TeamsRouteImport } from './routes/teams'
+import { Route as TemplatesRouteImport } from './routes/templates'
+import { Route as MembersIndexRouteImport } from './routes/members/index'
+import { Route as MembersMemberIdRouteImport } from './routes/members/$memberId'
+import { Route as TasksIndexRouteImport } from './routes/tasks/index'
+import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 import { Route as ApiPublicCronTickRouteImport } from './routes/api/public/cron-tick'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram-webhook'
 
@@ -22,6 +29,41 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamsRoute = TeamsRouteImport.update({
+  id: '/teams',
+  path: '/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesRoute = TemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembersIndexRoute = MembersIndexRouteImport.update({
+  id: '/members/',
+  path: '/members/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembersMemberIdRoute = MembersMemberIdRouteImport.update({
+  id: '/members/$memberId',
+  path: '/members/$memberId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksIndexRoute = TasksIndexRouteImport.update({
+  id: '/tasks/',
+  path: '/tasks/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
+  id: '/tasks/$taskId',
+  path: '/tasks/$taskId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicCronTickRoute = ApiPublicCronTickRouteImport.update({
@@ -39,12 +81,26 @@ const ApiPublicTelegramWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/settings': typeof SettingsRoute
+  '/teams': typeof TeamsRoute
+  '/templates': typeof TemplatesRoute
+  '/members/$memberId': typeof MembersMemberIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/members/': typeof MembersIndexRoute
+  '/tasks/': typeof TasksIndexRoute
   '/api/public/cron-tick': typeof ApiPublicCronTickRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/settings': typeof SettingsRoute
+  '/teams': typeof TeamsRoute
+  '/templates': typeof TemplatesRoute
+  '/members/$memberId': typeof MembersMemberIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/members': typeof MembersIndexRoute
+  '/tasks': typeof TasksIndexRoute
   '/api/public/cron-tick': typeof ApiPublicCronTickRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -52,19 +108,54 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/settings': typeof SettingsRoute
+  '/teams': typeof TeamsRoute
+  '/templates': typeof TemplatesRoute
+  '/members/$memberId': typeof MembersMemberIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/members/': typeof MembersIndexRoute
+  '/tasks/': typeof TasksIndexRoute
   '/api/public/cron-tick': typeof ApiPublicCronTickRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/api/public/cron-tick' | '/api/public/telegram-webhook'
+    | '/'
+    | '/auth'
+    | '/settings'
+    | '/teams'
+    | '/templates'
+    | '/members/$memberId'
+    | '/tasks/$taskId'
+    | '/members/'
+    | '/tasks/'
+    | '/api/public/cron-tick'
+    | '/api/public/telegram-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/api/public/cron-tick' | '/api/public/telegram-webhook'
+  to:
+    | '/'
+    | '/auth'
+    | '/settings'
+    | '/teams'
+    | '/templates'
+    | '/members/$memberId'
+    | '/tasks/$taskId'
+    | '/members'
+    | '/tasks'
+    | '/api/public/cron-tick'
+    | '/api/public/telegram-webhook'
   id:
     | '__root__'
     | '/'
     | '/auth'
+    | '/settings'
+    | '/teams'
+    | '/templates'
+    | '/members/$memberId'
+    | '/tasks/$taskId'
+    | '/members/'
+    | '/tasks/'
     | '/api/public/cron-tick'
     | '/api/public/telegram-webhook'
   fileRoutesById: FileRoutesById
@@ -72,6 +163,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  SettingsRoute: typeof SettingsRoute
+  TeamsRoute: typeof TeamsRoute
+  TemplatesRoute: typeof TemplatesRoute
+  MembersMemberIdRoute: typeof MembersMemberIdRoute
+  TasksTaskIdRoute: typeof TasksTaskIdRoute
+  MembersIndexRoute: typeof MembersIndexRoute
+  TasksIndexRoute: typeof TasksIndexRoute
   ApiPublicCronTickRoute: typeof ApiPublicCronTickRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
@@ -90,6 +188,55 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teams': {
+      id: '/teams'
+      path: '/teams'
+      fullPath: '/teams'
+      preLoaderRoute: typeof TeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/members/': {
+      id: '/members/'
+      path: '/members'
+      fullPath: '/members/'
+      preLoaderRoute: typeof MembersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/members/$memberId': {
+      id: '/members/$memberId'
+      path: '/members/$memberId'
+      fullPath: '/members/$memberId'
+      preLoaderRoute: typeof MembersMemberIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks/': {
+      id: '/tasks/'
+      path: '/tasks'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof TasksIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks/$taskId': {
+      id: '/tasks/$taskId'
+      path: '/tasks/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof TasksTaskIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron-tick': {
@@ -112,6 +259,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  SettingsRoute: SettingsRoute,
+  TeamsRoute: TeamsRoute,
+  TemplatesRoute: TemplatesRoute,
+  MembersMemberIdRoute: MembersMemberIdRoute,
+  TasksTaskIdRoute: TasksTaskIdRoute,
+  MembersIndexRoute: MembersIndexRoute,
+  TasksIndexRoute: TasksIndexRoute,
   ApiPublicCronTickRoute: ApiPublicCronTickRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }

@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssignments, useMembers, useTeams, initials } from "@/lib/queries";
+import { useAssignmentsRealtime } from "@/hooks/useRealtime";
 import { daysUntilBirthday, formatDateTime, formatDayMonth } from "@/lib/dates";
 
 export const Route = createFileRoute("/")({
@@ -75,6 +76,7 @@ function KpiCard({
 
 function Dashboard() {
   const { data: assignments = [], isLoading } = useAssignments();
+  useAssignmentsRealtime();
   const { data: members = [] } = useMembers();
   const { data: teams = [] } = useTeams();
   const [draft, setDraft] = useState<TaskDraft | undefined>(undefined);
@@ -161,9 +163,7 @@ function Dashboard() {
   return (
     <AppShell title="Дашборд">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Membership Experience · AIESEC LC Astana
-        </p>
+        <p className="text-sm text-muted-foreground">Membership Experience · AIESEC LC Astana</p>
         <Button
           onClick={() => {
             setDraft(undefined);

@@ -49,7 +49,7 @@ export function NewTaskDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  draft?: TaskDraft;
+  draft?: TaskDraft | undefined;
 }) {
   const { profile } = useAuth();
   const qc = useQueryClient();

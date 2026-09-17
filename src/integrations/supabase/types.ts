@@ -406,6 +406,7 @@ export type Database = {
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       my_team_id: { Args: never; Returns: string }
+      revoke_staff: { Args: { _user_id: string }; Returns: undefined }
       set_staff_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

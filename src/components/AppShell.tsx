@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   Loader2,
+  Hourglass,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
@@ -32,7 +33,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export function AppShell({ title, children }: { title: string; children: ReactNode }) {
-  const { loading, session, profile, signOut } = useAuth();
+  const { loading, session, profile, approved, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -44,6 +45,36 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="size-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!approved) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="card-soft w-full max-w-md p-8 text-center">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-warning/25 text-warning-foreground">
+            <Hourglass className="size-7" />
+          </div>
+          <h1 className="text-lg font-semibold text-foreground">Ждём подтверждения</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Аккаунт {profile?.email ?? ""} создан. VP MXP должен выдать тебе роль в разделе
+            «Настройки», после этого обнови страницу.
+          </p>
+          <div className="mt-6 flex justify-center gap-2">
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Обновить
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                void signOut().then(() => navigate({ to: "/auth" }));
+              }}
+            >
+              <LogOut className="size-4" /> Выйти
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
