@@ -37,7 +37,10 @@ function AuthPage() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) return toast.error("Не удалось войти", { description: error.message });
+    if (error) {
+      toast.error("Не удалось войти", { description: error.message });
+      return;
+    }
     toast.success("С возвращением!");
     void refreshProfile();
     void navigate({ to: "/" });
@@ -45,7 +48,10 @@ function AuthPage() {
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!fullName.trim()) return toast.error("Укажите имя и фамилию");
+    if (!fullName.trim()) {
+      toast.error("Укажите имя и фамилию");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -56,7 +62,10 @@ function AuthPage() {
       },
     });
     setBusy(false);
-    if (error) return toast.error("Не удалось зарегистрироваться", { description: error.message });
+    if (error) {
+      toast.error("Не удалось зарегистрироваться", { description: error.message });
+      return;
+    }
     toast.success("Аккаунт создан");
     void navigate({ to: "/" });
   }
