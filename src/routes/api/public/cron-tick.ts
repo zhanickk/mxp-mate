@@ -32,7 +32,7 @@ async function runTick() {
     .select(
       "id, member_id, status, reminder_sent, members:member_id ( full_name, telegram_chat_id ), tasks:task_id ( id, title, deadline, created_by, is_recurring, recurrence, team_id )",
     )
-    .in("status", OPEN as unknown as string[]);
+    .in("status", [...OPEN]);
 
   const rows = (data ?? []) as unknown as Row[];
 
