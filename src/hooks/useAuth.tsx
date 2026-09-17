@@ -29,10 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function loadProfile() {
-    const { data, error } = await supabase.rpc("ensure_profile", {
-      _full_name: null,
-      _email: null,
-    });
+    const { data, error } = await supabase.rpc("ensure_profile", {});
     if (error) {
       console.error(error);
       setProfile(null);
