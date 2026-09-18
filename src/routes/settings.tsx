@@ -280,8 +280,9 @@ function StaffCard({ isVp, myId }: { isVp: boolean; myId: string | undefined }) 
         <div>
           <p className="font-semibold text-foreground">Команда управления</p>
           <p className="text-sm text-muted-foreground">
-            Коллеги регистрируются сами, а VP выдаёт им доступ и роль. Привяжи аккаунт к мемберу,
-            тогда бот будет присылать уведомления «Нужна помощь» и о просрочках.
+            Доступ к сайту есть только у VP и тимлидов. VP видит и назначает всё, тимлид работает
+            лишь со своей командой. Менеджеры и мемберы получают джейдишки в боте. Привяжи аккаунт к
+            мемберу, тогда бот будет присылать уведомления «Нужна помощь» и о просрочках.
           </p>
         </div>
       </div>
@@ -335,7 +336,7 @@ function StaffCard({ isVp, myId }: { isVp: boolean; myId: string | undefined }) 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["vp", "team_leader", "manager"] as const).map((r) => (
+                  {(["vp", "team_leader"] as const).map((r) => (
                     <SelectItem key={r} value={r}>
                       {POSITION_LABEL[r]}
                     </SelectItem>

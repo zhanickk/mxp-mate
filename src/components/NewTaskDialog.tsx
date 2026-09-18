@@ -51,7 +51,7 @@ export function NewTaskDialog({
   onOpenChange: (v: boolean) => void;
   draft?: TaskDraft | undefined;
 }) {
-  const { profile } = useAuth();
+  const { profile, isVp } = useAuth();
   const qc = useQueryClient();
   const send = useServerFn(sendTask);
   const { data: members = [] } = useMembers();
@@ -76,12 +76,12 @@ export function NewTaskDialog({
     setTitle(draft?.title ?? "");
     setDescription(draft?.description ?? "");
     setCategory(draft?.category ?? "Другое");
-    setTeamId("all");
+    setTeamId(isVp ? "all" : (profile?.team_id ?? "all"));
     setDate(d.date);
     setTime(d.time || "18:00");
     setSelected(draft?.memberIds ?? []);
     setRecurring(false);
-  }, [open, draft]);
+  }, [open, draft, isVp, profile?.team_id]);
 
   const activeMembers = useMemo(() => members.filter((m) => m.is_active), [members]);
 
@@ -229,7 +229,7 @@ export function NewTaskDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Весь MXP</SelectItem>
+                  {isVp ? <SelectItem value="all">Весь MXP</SelectItem> : null}
                   {teams.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
@@ -275,9 +275,11 @@ export function NewTaskDialog({
                   Вся {t.name}
                 </Button>
               ))}
-              <Button type="button" size="sm" variant="outline" onClick={() => selectTeam(null)}>
-                Все MXP
-              </Button>
+              {isVp ? (
+                <Button type="button" size="sm" variant="outline" onClick={() => selectTeam(null)}>
+                  Все MXP
+                </Button>
+              ) : null}
               <Button type="button" size="sm" variant="ghost" onClick={() => setSelected([])}>
                 Очистить
               </Button>
@@ -285,7 +287,7 @@ export function NewTaskDialog({
             <div className="mt-2 max-h-52 space-y-1 overflow-y-auto rounded-xl border border-border p-2">
               {activeMembers.length === 0 ? (
                 <p className="px-2 py-4 text-sm text-muted-foreground">
-                  Сначала добавьте мемберов на странице «Мемберы».
+                  Пока некому назначать: добавь мемберов на странице «Мемберы».
                 </p>
               ) : (
                 activeMembers.map((m) => {

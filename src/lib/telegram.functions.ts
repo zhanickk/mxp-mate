@@ -1,6 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
+/** Оставляет только те назначения, которые доступны вызывающему по его правам. */
+async function visibleAssignmentIds(
+  supabase: SupabaseClient<Database>,
+  ids: string[],
+): Promise<string[]> {
+  const { data, error } = await supabase.from("task_assignments").select("id").in("id", ids);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.id);
+}
 
 /** Sends the JD to every listed assignment. */
 export const sendTask = createServerFn({ method: "POST" })
@@ -8,9 +20,11 @@ export const sendTask = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z.object({ assignment_ids: z.array(z.string().uuid()).min(1) }).parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const allowed = await visibleAssignmentIds(context.supabase, data.assignment_ids);
+    if (allowed.length === 0) throw new Error("Нет прав на эти задачи");
     const { dispatchAssignments } = await import("./dispatch.server");
-    return dispatchAssignments(data.assignment_ids);
+    return dispatchAssignments(allowed);
   });
 
 /** Re-sends an existing JD message. */
@@ -19,9 +33,11 @@ export const resendTask = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z.object({ assignment_ids: z.array(z.string().uuid()).min(1) }).parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const allowed = await visibleAssignmentIds(context.supabase, data.assignment_ids);
+    if (allowed.length === 0) throw new Error("Нет прав на эти задачи");
     const { dispatchAssignments } = await import("./dispatch.server");
-    return dispatchAssignments(data.assignment_ids, {
+    return dispatchAssignments(allowed, {
       prefix: "🔁 <b>Джейдишка (повторно)</b>",
       resend: true,
     });
@@ -31,7 +47,9 @@ export const resendTask = createServerFn({ method: "POST" })
 export const sendReminder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ assignment_id: z.string().uuid() }).parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const allowed = await visibleAssignmentIds(context.supabase, [data.assignment_id]);
+    if (allowed.length === 0) throw new Error("Нет прав на эту задачу");
     const { sendReminderFor } = await import("./dispatch.server");
     return sendReminderFor(data.assignment_id);
   });

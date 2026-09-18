@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { initials } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 
-const NAV = [
+const NAV_ALL = [
   { to: "/", label: "Дашборд", icon: LayoutDashboard },
   { to: "/tasks", label: "Задачи", icon: ListChecks },
   { to: "/members", label: "Мемберы", icon: Users },
@@ -26,6 +26,8 @@ const NAV = [
   { to: "/settings", label: "Настройки", icon: Settings },
 ] as const;
 
+const VP_ONLY = new Set(["/settings"]);
+
 const ROLE_LABEL: Record<string, string> = {
   vp: "VP MXP",
   team_leader: "Team Leader",
@@ -33,7 +35,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export function AppShell({ title, children }: { title: string; children: ReactNode }) {
-  const { loading, session, profile, approved, signOut } = useAuth();
+  const { loading, session, profile, approved, isVp, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -78,6 +80,8 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
       </div>
     );
   }
+
+  const NAV = NAV_ALL.filter((item) => isVp || !VP_ONLY.has(item.to));
 
   const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
 
