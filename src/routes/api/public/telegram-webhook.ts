@@ -267,8 +267,11 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
         let expected: string;
         try {
           expected = await getWebhookSecret();
-        } catch {
-          return new Response("Bot token not configured", { status: 500 });
+        } catch (error) {
+          console.error("[telegram-webhook] no bot token:", error);
+          return new Response(`Bot token not configured: ${String(error).slice(0, 200)}`, {
+            status: 500,
+          });
         }
 
         if (request.headers.get("x-telegram-bot-api-secret-token") !== expected) {
