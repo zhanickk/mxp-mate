@@ -30,7 +30,7 @@ import {
 } from "@/lib/queries";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Настройки — MXP Tasks" }] }),
+  head: () => ({ meta: [{ title: "Настройки · MXP Tasks" }] }),
   component: SettingsPage,
 });
 
@@ -130,7 +130,7 @@ function BotCard({ isVp }: { isVp: boolean }) {
               ? `@${s.me.username}`
               : s?.configured
                 ? (s.error ?? "Ошибка")
-                : "—"
+                : "-"
           }
         />
         <StatusTile
@@ -280,7 +280,7 @@ function StaffCard({ isVp, myId }: { isVp: boolean; myId: string | undefined }) 
         <div>
           <p className="font-semibold text-foreground">Команда управления</p>
           <p className="text-sm text-muted-foreground">
-            Коллеги регистрируются сами, а VP выдаёт им доступ и роль. Привяжи аккаунт к мемберу —
+            Коллеги регистрируются сами, а VP выдаёт им доступ и роль. Привяжи аккаунт к мемберу,
             тогда бот будет присылать уведомления «Нужна помощь» и о просрочках.
           </p>
         </div>
@@ -298,7 +298,7 @@ function StaffCard({ isVp, myId }: { isVp: boolean; myId: string | undefined }) 
               </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">
-                  {p.full_name || "—"}
+                  {p.full_name || "-"}
                   {p.id === myId ? " (ты)" : ""}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">{p.email}</p>

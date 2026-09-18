@@ -35,12 +35,12 @@ import { daysUntilBirthday, formatDateTime, formatDayMonth } from "@/lib/dates";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Дашборд — MXP Tasks" },
+      { title: "Дашборд · MXP Tasks" },
       {
         name: "description",
         content: "Обзор джейдишек, прогресса команд и дней рождения MXP AIESEC LC Astana.",
       },
-      { property: "og:title", content: "Дашборд — MXP Tasks" },
+      { property: "og:title", content: "Дашборд · MXP Tasks" },
       {
         property: "og:description",
         content: "Обзор джейдишек, прогресса команд и дней рождения MXP AIESEC LC Astana.",

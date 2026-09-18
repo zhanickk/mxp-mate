@@ -31,7 +31,7 @@ import {
 import { formatDate, formatDateTime } from "@/lib/dates";
 
 export const Route = createFileRoute("/members/$memberId")({
-  head: () => ({ meta: [{ title: "Профиль мембера — MXP Tasks" }] }),
+  head: () => ({ meta: [{ title: "Профиль мембера · MXP Tasks" }] }),
   component: MemberProfile,
 });
 

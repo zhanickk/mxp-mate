@@ -11,9 +11,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Вход — MXP Tasks" },
+      { title: "Вход · MXP Tasks" },
       { name: "description", content: "Вход для команды MXP AIESEC LC Astana." },
-      { property: "og:title", content: "Вход — MXP Tasks" },
+      { property: "og:title", content: "Вход · MXP Tasks" },
       { property: "og:description", content: "Вход для команды MXP AIESEC LC Astana." },
     ],
   }),
@@ -79,7 +79,9 @@ function AuthPage() {
           </div>
           <div>
             <h1 className="text-xl font-semibold text-foreground">MXP Tasks</h1>
-            <p className="text-sm text-muted-foreground">AIESEC LC Astana · Membership Experience</p>
+            <p className="text-sm text-muted-foreground">
+              AIESEC LC Astana · Membership Experience
+            </p>
           </div>
         </div>
 

@@ -59,7 +59,7 @@ export function InviteDialog({
         <DialogHeader>
           <DialogTitle>Приглашение в бота</DialogTitle>
           <DialogDescription>
-            {member?.full_name} — открыть ссылку или отсканировать QR и нажать Start.
+            {member?.full_name}: открой ссылку или отсканируй QR и нажми Start.
           </DialogDescription>
         </DialogHeader>
         {link ? (

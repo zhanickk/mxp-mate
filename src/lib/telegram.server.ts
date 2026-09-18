@@ -134,7 +134,7 @@ const almatyFmt = new Intl.DateTimeFormat("ru-RU", {
 });
 
 export function almaty(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return almatyFmt.format(new Date(iso)).replace(",", "");
 }
 

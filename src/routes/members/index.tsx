@@ -27,7 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/members/")({
-  head: () => ({ meta: [{ title: "Мемберы — MXP Tasks" }] }),
+  head: () => ({ meta: [{ title: "Мемберы · MXP Tasks" }] }),
   component: MembersPage,
 });
 

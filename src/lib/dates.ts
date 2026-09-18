@@ -37,28 +37,28 @@ function toDate(value: string | Date | null | undefined): Date | null {
 /** 31.12.2026 18:30 (Астана) */
 export function formatDateTime(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? dateTimeFmt.format(d).replace(",", "") : "—";
+  return d ? dateTimeFmt.format(d).replace(",", "") : "-";
 }
 
 export function formatDate(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? dateFmt.format(d) : "—";
+  return d ? dateFmt.format(d) : "-";
 }
 
 export function formatTime(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? timeFmt.format(d) : "—";
+  return d ? timeFmt.format(d) : "-";
 }
 
 export function formatDayMonth(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? dayMonthFmt.format(d) : "—";
+  return d ? dayMonthFmt.format(d) : "-";
 }
 
 /** "через 2 дня" / "3 часа назад" */
 export function formatRelative(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  if (!d) return "—";
+  if (!d) return "-";
   const diffMs = d.getTime() - Date.now();
   const abs = Math.abs(diffMs);
   const rtf = new Intl.RelativeTimeFormat("ru", { numeric: "auto" });

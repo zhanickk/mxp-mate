@@ -31,7 +31,7 @@ import { formatDateTime, formatRelative, isOverdue } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tasks/")({
-  head: () => ({ meta: [{ title: "Задачи — MXP Tasks" }] }),
+  head: () => ({ meta: [{ title: "Задачи · MXP Tasks" }] }),
   component: TasksPage,
 });
 
@@ -192,7 +192,7 @@ function TasksPage() {
           title={rows.length === 0 ? "Пока нет джейдишек" : "Ничего не найдено"}
           description={
             rows.length === 0
-              ? "Создай первую задачу — она сразу уйдёт мемберам в Telegram."
+              ? "Создай первую задачу, она сразу уйдёт мемберам в Telegram."
               : "Попробуй изменить фильтры."
           }
           action={

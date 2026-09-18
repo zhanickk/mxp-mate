@@ -119,10 +119,10 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">
-                {profile?.full_name ?? "—"}
+                {profile?.full_name ?? "-"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {ROLE_LABEL[profile?.role ?? ""] ?? "—"}
+                {ROLE_LABEL[profile?.role ?? ""] ?? "-"}
               </p>
             </div>
           </div>

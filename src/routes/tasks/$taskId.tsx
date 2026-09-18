@@ -54,7 +54,7 @@ import { formatDateTime, formatRelative, isOverdue } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tasks/$taskId")({
-  head: () => ({ meta: [{ title: "Задача — MXP Tasks" }] }),
+  head: () => ({ meta: [{ title: "Задача · MXP Tasks" }] }),
   component: TaskDetail,
 });
 
@@ -105,8 +105,8 @@ function TaskDetail() {
   const done = rows.filter((r) => r.status === "done").length;
   const overall = aggregateStatus(rows);
   const teamName = teams.find((t) => t.id === task.team_id)?.name ?? "Весь MXP";
-  const creator = profiles.find((p) => p.id === task.created_by)?.full_name ?? "—";
-  const nameById = new Map(rows.map((r) => [r.member_id, r.members?.full_name ?? "—"]));
+  const creator = profiles.find((p) => p.id === task.created_by)?.full_name ?? "-";
+  const nameById = new Map(rows.map((r) => [r.member_id, r.members?.full_name ?? "-"]));
 
   async function refresh() {
     await qc.invalidateQueries({ queryKey: ["assignments"] });
@@ -151,13 +151,11 @@ function TaskDetail() {
       toast.error("Не удалось изменить статус", { description: error.message });
       return;
     }
-    await supabase
-      .from("activity_log")
-      .insert({
-        assignment_id: id,
-        member_id: memberId,
-        action: `Статус изменён вручную: ${STATUS_LABEL[status]}`,
-      });
+    await supabase.from("activity_log").insert({
+      assignment_id: id,
+      member_id: memberId,
+      action: `Статус изменён вручную: ${STATUS_LABEL[status]}`,
+    });
     toast.success("Статус обновлён");
     await refresh();
   }
@@ -281,7 +279,7 @@ function TaskDetail() {
                     </span>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">
-                        {r.members?.full_name ?? "—"}
+                        {r.members?.full_name ?? "-"}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {r.done_at

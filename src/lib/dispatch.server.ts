@@ -107,7 +107,11 @@ export async function dispatchAssignments(
           sent_at: new Date().toISOString(),
         })
         .eq("id", row.id);
-      await logActivity(row.id, row.member_id, opts.resend ? "Отправлено повторно" : "Отправлено в Telegram");
+      await logActivity(
+        row.id,
+        row.member_id,
+        opts.resend ? "Отправлено повторно" : "Отправлено в Telegram",
+      );
     } else {
       failed.push(member.full_name);
       await supabaseAdmin

@@ -71,13 +71,11 @@ export const setupWebhook = createServerFn({ method: "POST" })
 
     if (me.ok && me.result?.username) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin
-        .from("app_settings")
-        .upsert({
-          key: "bot_username",
-          value: me.result.username,
-          updated_at: new Date().toISOString(),
-        });
+      await supabaseAdmin.from("app_settings").upsert({
+        key: "bot_username",
+        value: me.result.username,
+        updated_at: new Date().toISOString(),
+      });
     }
 
     return {

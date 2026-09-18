@@ -104,7 +104,7 @@ async function runTick() {
     if (!row.reminder_sent && deadline <= soon && chatId) {
       await sendMessage(
         chatId,
-        `⏰ Напоминание: «${escapeHtml(row.tasks.title)}» — дедлайн ${almaty(deadline)} (Астана)`,
+        `⏰ Напоминание: «${escapeHtml(row.tasks.title)}», дедлайн ${almaty(deadline)} (Астана)`,
       );
       await supabaseAdmin.from("task_assignments").update({ reminder_sent: true }).eq("id", row.id);
       await logActivity(row.id, row.member_id, "Отправлено напоминание о дедлайне");

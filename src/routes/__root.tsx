@@ -77,7 +77,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "MXP Tasks — AIESEC LC Astana" },
+      { title: "MXP Tasks · AIESEC LC Astana" },
       { name: "description", content: "Джейдишки и трекинг задач MXP AIESEC LC Astana" },
       { name: "theme-color", content: "#037EF3" },
       { property: "og:title", content: "MXP Tasks" },

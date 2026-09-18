@@ -29,7 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, useTeams, useTemplates, type Template } from "@/lib/queries";
 
 export const Route = createFileRoute("/templates")({
-  head: () => ({ meta: [{ title: "Шаблоны — MXP Tasks" }] }),
+  head: () => ({ meta: [{ title: "Шаблоны · MXP Tasks" }] }),
   component: TemplatesPage,
 });
 
@@ -60,7 +60,7 @@ function TemplatesPage() {
     <AppShell title="Шаблоны">
       <div className="mb-5 flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Повторяющиеся джейдишки — создаются в пару кликов.
+          Повторяющиеся джейдишки: создаются в пару кликов.
         </p>
         <Button
           onClick={() => {

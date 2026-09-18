@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { POSITION_LABEL, initials, useAssignments, useMembers, useTeams } from "@/lib/queries";
 
 export const Route = createFileRoute("/teams")({
-  head: () => ({ meta: [{ title: "Команды — MXP Tasks" }] }),
+  head: () => ({ meta: [{ title: "Команды · MXP Tasks" }] }),
   component: TeamsPage,
 });
 
@@ -119,7 +119,7 @@ function TeamsPage() {
                           </p>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {s ? `${s.done}/${s.total}` : "—"}
+                          {s ? `${s.done}/${s.total}` : "-"}
                         </span>
                         <span
                           className={
