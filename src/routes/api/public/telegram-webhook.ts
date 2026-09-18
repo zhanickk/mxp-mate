@@ -222,7 +222,11 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
   await logActivity(
     assignmentId,
     row.member_id,
-    action === "acc" ? "Принял задачу" : action === "done" ? "Отметил выполненной" : "Запросил помощь",
+    action === "acc"
+      ? "Принял задачу"
+      : action === "done"
+        ? "Отметил выполненной"
+        : "Запросил помощь",
   );
 
   const baseText = taskMessage({
@@ -250,10 +254,7 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
   }
 
   if (status === "done") {
-    await sendMessage(
-      chatId,
-      "Можешь отправить ссылку или комментарий к результату (или /skip)",
-    );
+    await sendMessage(chatId, "Можешь отправить ссылку или комментарий к результату (или /skip)");
   }
 
   await answerCallbackQuery(update.id, toast);
@@ -265,7 +266,7 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
       POST: async ({ request }) => {
         let expected: string;
         try {
-          expected = getWebhookSecret();
+          expected = await getWebhookSecret();
         } catch {
           return new Response("Bot token not configured", { status: 500 });
         }

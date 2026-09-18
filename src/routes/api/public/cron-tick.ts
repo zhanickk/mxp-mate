@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { almaty, escapeHtml, sendMessage, sleep } from "@/lib/telegram.server";
+import {
+  almaty,
+  escapeHtml,
+  getWebhookInfo,
+  getWebhookSecret,
+  hasBotToken,
+  sendMessage,
+  setWebhook,
+  sleep,
+  getMe,
+} from "@/lib/telegram.server";
 import { dispatchAssignments, logActivity, notifyTaskCreator } from "@/lib/dispatch.server";
 
 const OPEN = ["sent", "accepted", "help_needed"] as const;
@@ -22,10 +32,42 @@ type Row = {
   } | null;
 };
 
+/** Keeps the Telegram webhook pointed at this app, so the bot works without manual setup. */
+async function ensureWebhook(): Promise<string> {
+  if (!(await hasBotToken())) return "no_token";
+
+  const { data: urlRow } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "app_url")
+    .maybeSingle();
+
+  const appUrl = urlRow?.value?.replace(/\/$/, "");
+  if (!appUrl) return "no_app_url";
+
+  const expected = `${appUrl}/api/public/telegram-webhook`;
+  const info = await getWebhookInfo();
+  if (info.ok && info.result?.url === expected) return "ok";
+
+  const res = await setWebhook(expected, await getWebhookSecret());
+  if (!res.ok) return `error: ${res.description ?? "unknown"}`;
+
+  const me = await getMe();
+  if (me.ok && me.result?.username) {
+    await supabaseAdmin.from("app_settings").upsert({
+      key: "bot_username",
+      value: me.result.username,
+      updated_at: new Date().toISOString(),
+    });
+  }
+  return "connected";
+}
+
 async function runTick() {
+  const webhook = await ensureWebhook();
   const now = new Date();
   const soon = new Date(now.getTime() + 24 * 3600 * 1000).toISOString();
-  const summary = { reminders: 0, overdue: 0, recurring: 0, birthdays: 0 };
+  const summary = { webhook, reminders: 0, overdue: 0, recurring: 0, birthdays: 0 };
 
   const { data } = await supabaseAdmin
     .from("task_assignments")
@@ -223,6 +265,11 @@ export const Route = createFileRoute("/api/public/cron-tick")({
         }
         try {
           const summary = await runTick();
+          await supabaseAdmin.from("app_settings").upsert({
+            key: "cron_last_run",
+            value: `${new Date().toISOString()} ${JSON.stringify(summary)}`,
+            updated_at: new Date().toISOString(),
+          });
           return Response.json({ ok: true, ...summary });
         } catch (error) {
           console.error("[cron-tick]", error);

@@ -3,20 +3,43 @@ import { createHash } from "node:crypto";
 
 const API_ROOT = "https://api.telegram.org/bot";
 
-export function getBotToken(): string {
-  const token = process.env["TELEGRAM_BOT_TOKEN"];
+let cachedToken: string | null = null;
+
+/** Bot token: Lovable secret first, then the value stored in app_settings. */
+export async function resolveBotToken(): Promise<string | null> {
+  const fromEnv = process.env["TELEGRAM_BOT_TOKEN"];
+  if (fromEnv) return fromEnv;
+  if (cachedToken) return cachedToken;
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "telegram_bot_token")
+    .maybeSingle();
+
+  cachedToken = data?.value?.trim() || null;
+  return cachedToken;
+}
+
+export async function getBotToken(): Promise<string> {
+  const token = await resolveBotToken();
   if (!token) {
     throw new Error(
-      "TELEGRAM_BOT_TOKEN не настроен. Добавьте секрет в Project Settings → Secrets.",
+      "Токен бота не настроен: добавьте секрет TELEGRAM_BOT_TOKEN или запись telegram_bot_token в app_settings.",
     );
   }
   return token;
 }
 
+export async function hasBotToken(): Promise<boolean> {
+  return (await resolveBotToken()) !== null;
+}
+
 /** Secret token sent by Telegram in X-Telegram-Bot-Api-Secret-Token, derived from the bot token. */
-export function getWebhookSecret(): string {
+export async function getWebhookSecret(): Promise<string> {
   return createHash("sha256")
-    .update(`mxp-tasks:${getBotToken()}`, "utf8")
+    .update(`mxp-tasks:${await getBotToken()}`, "utf8")
     .digest("hex")
     .slice(0, 48);
 }
@@ -27,12 +50,14 @@ async function callApi<T = unknown>(
   method: string,
   payload: Record<string, unknown>,
 ): Promise<TgResult<T>> {
-  const res = await fetch(`${API_ROOT}${getBotToken()}/${method}`, {
+  const res = await fetch(`${API_ROOT}${await getBotToken()}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const json = (await res.json().catch(() => ({ ok: false, description: "Bad response" }))) as TgResult<T>;
+  const json = (await res
+    .json()
+    .catch(() => ({ ok: false, description: "Bad response" }))) as TgResult<T>;
   if (!json.ok) {
     console.error(`[telegram] ${method} failed:`, json.description);
   }
@@ -41,11 +66,7 @@ async function callApi<T = unknown>(
 
 export type InlineButton = { text: string; callback_data: string };
 
-export function sendMessage(
-  chatId: number | string,
-  text: string,
-  keyboard?: InlineButton[][],
-) {
+export function sendMessage(chatId: number | string, text: string, keyboard?: InlineButton[][]) {
   return callApi<{ message_id: number }>("sendMessage", {
     chat_id: chatId,
     text,
@@ -100,10 +121,7 @@ export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // ---------- message composition ----------
 
 export function escapeHtml(value: string | null | undefined): string {
-  return (value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return (value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 const almatyFmt = new Intl.DateTimeFormat("ru-RU", {

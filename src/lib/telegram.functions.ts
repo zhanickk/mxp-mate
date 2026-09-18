@@ -41,7 +41,7 @@ export const getBotStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const tg = await import("./telegram.server");
-    if (!process.env["TELEGRAM_BOT_TOKEN"]) {
+    if (!(await tg.hasBotToken())) {
       return { configured: false as const };
     }
     const [me, hook] = await Promise.all([tg.getMe(), tg.getWebhookInfo()]);
@@ -66,14 +66,18 @@ export const setupWebhook = createServerFn({ method: "POST" })
 
     const tg = await import("./telegram.server");
     const url = `${data.origin.replace(/\/$/, "")}/api/public/telegram-webhook`;
-    const result = await tg.setWebhook(url, tg.getWebhookSecret());
+    const result = await tg.setWebhook(url, await tg.getWebhookSecret());
     const me = await tg.getMe();
 
     if (me.ok && me.result?.username) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin
         .from("app_settings")
-        .upsert({ key: "bot_username", value: me.result.username, updated_at: new Date().toISOString() });
+        .upsert({
+          key: "bot_username",
+          value: me.result.username,
+          updated_at: new Date().toISOString(),
+        });
     }
 
     return {
