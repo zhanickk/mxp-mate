@@ -43,7 +43,7 @@ type Row = Task & {
   names: string[];
 };
 
-const KANBAN = ["sent", "accepted", "help_needed", "overdue", "done"] as const;
+const KANBAN = ["sent", "accepted", "submitted", "help_needed", "overdue", "done"] as const;
 
 function TasksPage() {
   const { data: tasks = [], isLoading } = useTasks();

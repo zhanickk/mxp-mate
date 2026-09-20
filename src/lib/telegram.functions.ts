@@ -54,6 +54,76 @@ export const sendReminder = createServerFn({ method: "POST" })
     return sendReminderFor(data.assignment_id);
   });
 
+/** Принять сданную работу или вернуть её на доработку. Права проверяет сама база. */
+export const reviewAssignment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        assignment_id: z.string().uuid(),
+        approve: z.boolean(),
+        comment: z.string().max(2000).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("review_assignment", {
+      _assignment_id: data.assignment_id,
+      _approve: data.approve,
+      ...(data.comment ? { _comment: data.comment } : {}),
+    });
+    if (error) throw new Error(error.message);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { escapeHtml, keyboardFor, sendMessage, STATUS_LINE, taskMessage } =
+      await import("./telegram.server");
+
+    const { data: row } = await supabaseAdmin
+      .from("task_assignments")
+      .select(
+        "id, members:member_id ( telegram_chat_id ), tasks:task_id ( title, description, deadline, teams:team_id ( name ) )",
+      )
+      .eq("id", data.assignment_id)
+      .maybeSingle();
+
+    const loaded = row as unknown as {
+      members: { telegram_chat_id: number | null } | null;
+      tasks: {
+        title: string;
+        description: string | null;
+        deadline: string;
+        teams: { name: string } | null;
+      } | null;
+    } | null;
+
+    const chatId = loaded?.members?.telegram_chat_id;
+    if (chatId && loaded?.tasks) {
+      if (data.approve) {
+        const tail = data.comment ? `\n\n💬 ${escapeHtml(data.comment)}` : "";
+        await sendMessage(
+          chatId,
+          `👍 Твою работу по «${escapeHtml(loaded.tasks.title)}» приняли. Красавчик!${tail}`,
+        );
+      } else {
+        const text = taskMessage({
+          title: loaded.tasks.title,
+          description: loaded.tasks.description,
+          teamName: loaded.tasks.teams?.name ?? "MXP",
+          deadline: loaded.tasks.deadline,
+          prefix: "↩️ <b>Вернули на доработку</b>",
+        });
+        const tail = data.comment ? `\n\n💬 ${escapeHtml(data.comment)}` : "";
+        await sendMessage(
+          chatId,
+          `${text}${tail}\n\n${STATUS_LINE["accepted"]}`,
+          keyboardFor("accepted", data.assignment_id),
+        );
+      }
+    }
+
+    return { ok: true as const };
+  });
+
 /** Bot health check: getMe + current webhook info. */
 export const getBotStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

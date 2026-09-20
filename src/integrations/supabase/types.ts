@@ -173,9 +173,14 @@ export type Database = {
           id: string
           member_id: string
           reminder_sent: boolean
+          review_comment: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["assignment_status"]
+          submitted_at: string | null
           task_id: string
+          team_id: string | null
           telegram_message_id: number | null
           updated_at: string
         }
@@ -188,9 +193,14 @@ export type Database = {
           id?: string
           member_id: string
           reminder_sent?: boolean
+          review_comment?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["assignment_status"]
+          submitted_at?: string | null
           task_id: string
+          team_id?: string | null
           telegram_message_id?: number | null
           updated_at?: string
         }
@@ -203,9 +213,14 @@ export type Database = {
           id?: string
           member_id?: string
           reminder_sent?: boolean
+          review_comment?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["assignment_status"]
+          submitted_at?: string | null
           task_id?: string
+          team_id?: string | null
           telegram_message_id?: number | null
           updated_at?: string
         }
@@ -215,6 +230,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
           {
@@ -405,7 +427,26 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      can_review_assignment: {
+        Args: { _assignment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      claim_position: { Args: { _code: string; _member_id: string }; Returns: undefined }
+      member_claim_preview: {
+        Args: { _code: string; _member_id: string }
+        Returns: {
+          already_claimed: boolean
+          full_name: string
+          position: Database["public"]["Enums"]["member_position"]
+          team_name: string | null
+        }[]
+      }
+      my_member_id: { Args: never; Returns: string }
       my_team_id: { Args: never; Returns: string }
+      review_assignment: {
+        Args: { _approve: boolean; _assignment_id: string; _comment?: string }
+        Returns: undefined
+      }
       revoke_staff: { Args: { _user_id: string }; Returns: undefined }
       set_staff_role: {
         Args: {
@@ -425,6 +466,7 @@ export type Database = {
         | "help_needed"
         | "overdue"
         | "not_delivered"
+        | "submitted"
       member_position: "vp" | "team_leader" | "manager" | "member"
     }
     CompositeTypes: {
@@ -561,6 +603,7 @@ export const Constants = {
         "help_needed",
         "overdue",
         "not_delivered",
+        "submitted",
       ],
       member_position: ["vp", "team_leader", "manager", "member"],
     },

@@ -141,7 +141,8 @@ export function almaty(iso: string | null | undefined): string {
 export const STATUS_LINE: Record<string, string> = {
   sent: "📨 Статус: отправлено",
   accepted: "✅ Статус: принято",
-  done: "🏁 Статус: выполнено",
+  submitted: "🕓 Статус: на проверке",
+  done: "🏁 Статус: принято тимлидом",
   help_needed: "🆘 Статус: нужна помощь",
   overdue: "⛔️ Статус: просрочено",
   not_delivered: "⚠️ Статус: не доставлено",
@@ -165,8 +166,18 @@ export function taskMessage(opts: {
   return lines.join("\n");
 }
 
+/** Кнопки для того, кто выдал джейдишку: принять работу или вернуть на доработку. */
+export function reviewKeyboard(assignmentId: string): InlineButton[][] {
+  return [
+    [
+      { text: "👍 Принять", callback_data: `ok:${assignmentId}` },
+      { text: "↩️ Вернуть", callback_data: `ret:${assignmentId}` },
+    ],
+  ];
+}
+
 export function keyboardFor(status: string, assignmentId: string): InlineButton[][] {
-  if (status === "done") return [];
+  if (status === "done" || status === "submitted") return [];
   if (status === "accepted" || status === "help_needed") {
     return [
       [

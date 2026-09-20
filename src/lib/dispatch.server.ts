@@ -8,6 +8,7 @@ import {
   taskMessage,
   almaty,
   escapeHtml,
+  type InlineButton,
 } from "./telegram.server";
 
 type AssignmentStatus = Database["public"]["Enums"]["assignment_status"];
@@ -149,7 +150,11 @@ export async function sendReminderFor(
 }
 
 /** DMs the creator's linked member, if any. */
-export async function notifyTaskCreator(createdBy: string | null, text: string) {
+export async function notifyTaskCreator(
+  createdBy: string | null,
+  text: string,
+  keyboard?: InlineButton[][] | undefined,
+) {
   if (!createdBy) return;
   const { data: profile } = await supabaseAdmin
     .from("profiles")
@@ -162,5 +167,5 @@ export async function notifyTaskCreator(createdBy: string | null, text: string) 
     .select("telegram_chat_id")
     .eq("id", profile.member_id)
     .maybeSingle();
-  if (member?.telegram_chat_id) await sendMessage(member.telegram_chat_id, text);
+  if (member?.telegram_chat_id) await sendMessage(member.telegram_chat_id, text, keyboard);
 }

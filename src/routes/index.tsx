@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CakeSlice,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
   LifeBuoy,
   ListChecks,
@@ -84,6 +85,7 @@ function Dashboard() {
 
   const stats = useMemo(() => {
     const active = assignments.filter((a) => ["sent", "accepted"].includes(a.status)).length;
+    const review = assignments.filter((a) => a.status === "submitted").length;
     const weekDone = assignments.filter(
       (a) => a.status === "done" && a.done_at && Date.now() - new Date(a.done_at).getTime() < WEEK,
     ).length;
@@ -91,7 +93,7 @@ function Dashboard() {
     const help = assignments.filter((a) => a.status === "help_needed").length;
     const done = assignments.filter((a) => a.status === "done").length;
     const rate = assignments.length ? Math.round((done / assignments.length) * 100) : 0;
-    return { active, weekDone, overdue, help, done, rate };
+    return { active, review, weekDone, overdue, help, done, rate };
   }, [assignments]);
 
   const weekly = useMemo(() => {
@@ -139,7 +141,9 @@ function Dashboard() {
     return [...map.values()].sort((a, b) => b.done - a.done).slice(0, 5);
   }, [assignments]);
 
-  const attention = assignments.filter((a) => ["help_needed", "overdue"].includes(a.status));
+  const attention = assignments.filter((a) =>
+    ["help_needed", "overdue", "submitted"].includes(a.status),
+  );
 
   const birthdays = useMemo(
     () =>
@@ -181,12 +185,18 @@ function Dashboard() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <KpiCard
             label="Активные"
             value={stats.active}
             icon={ListChecks}
             tone="bg-primary/10 text-primary"
+          />
+          <KpiCard
+            label="На проверке"
+            value={stats.review}
+            icon={ClipboardCheck}
+            tone="bg-accent/20 text-accent-foreground"
           />
           <KpiCard
             label="Выполнено за неделю"

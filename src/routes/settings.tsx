@@ -3,7 +3,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Bot, CheckCircle2, Link2, Loader2, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import {
+  Bot,
+  CheckCircle2,
+  Copy,
+  Link2,
+  Loader2,
+  RefreshCw,
+  ShieldCheck,
+  UserPlus,
+  XCircle,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +52,7 @@ function SettingsPage() {
     <AppShell title="Настройки">
       <div className="mx-auto max-w-4xl space-y-6">
         <BotCard isVp={isVp} />
+        <ClaimLinksCard isVp={isVp} />
         <StaffCard isVp={isVp} myId={profile?.id} />
       </div>
     </AppShell>
@@ -193,6 +204,90 @@ function BotCard({ isVp }: { isVp: boolean }) {
       {!isVp ? (
         <p className="mt-3 text-xs text-muted-foreground">Изменять настройки может только VP.</p>
       ) : null}
+    </div>
+  );
+}
+
+function ClaimLinksCard({ isVp }: { isVp: boolean }) {
+  const { data: members = [] } = useMembers();
+  const { data: profiles = [] } = useProfiles();
+  const { data: teams = [] } = useTeams();
+  const [origin, setOrigin] = useState(PUBLIC_ORIGIN);
+
+  useEffect(() => {
+    const o = window.location.origin;
+    if (!o.includes("id-preview") && !o.includes("localhost")) setOrigin(o);
+  }, []);
+
+  if (!isVp) return null;
+
+  const claimed = new Set(profiles.map((p) => p.member_id).filter(Boolean) as string[]);
+  const staffMembers = members.filter((m) => m.position === "vp" || m.position === "team_leader");
+
+  async function copyLink(memberId: string, code: string) {
+    const link = `${origin}/claim/${memberId}?code=${code}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success("Ссылка скопирована", { description: "Отправь её лично этому человеку." });
+    } catch {
+      toast.error("Не удалось скопировать", { description: link });
+    }
+  }
+
+  return (
+    <div className="card-soft p-6">
+      <div className="flex items-center gap-3">
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <UserPlus className="size-5" />
+        </div>
+        <div>
+          <p className="font-semibold text-foreground">Ссылки на регистрацию</p>
+          <p className="text-sm text-muted-foreground">
+            Персональная ссылка для VP и тимлидов. Человек регистрируется сам и сразу получает права
+            своей позиции, подтверждать вручную не нужно. Отправляй лично: кто откроет ссылку, тот и
+            займёт позицию.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-2">
+        {staffMembers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Нет мемберов с позицией VP или тимлид. Поставь позицию на странице «Мемберы».
+          </p>
+        ) : (
+          staffMembers.map((m) => (
+            <div
+              key={m.id}
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3"
+            >
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {initials(m.full_name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{m.full_name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {POSITION_LABEL[m.position] ?? m.position}
+                  {m.team_id ? ` · ${teams.find((t) => t.id === m.team_id)?.name ?? ""}` : ""}
+                </p>
+              </div>
+              {claimed.has(m.id) ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2.5 py-1 text-xs font-medium text-success">
+                  <CheckCircle2 className="size-3.5" /> Аккаунт привязан
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void copyLink(m.id, m.invite_code)}
+                >
+                  <Copy className="size-4" /> Скопировать ссылку
+                </Button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

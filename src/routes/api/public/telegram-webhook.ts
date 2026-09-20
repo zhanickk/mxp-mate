@@ -7,6 +7,7 @@ import {
   almaty,
   getWebhookSecret,
   keyboardFor,
+  reviewKeyboard,
   sendMessage,
   STATUS_LINE,
   taskMessage,
@@ -31,6 +32,7 @@ const HELP_TEXT = [
   "/help: список команд",
   "",
   "Кнопки под задачей: ✅ Принял · 🏁 Сделал · 🆘 Нужна помощь",
+  "После «Сделал» работа уходит на проверку тому, кто её выдал.",
 ].join("\n");
 
 async function memberByChat(chatId: number) {
@@ -95,7 +97,7 @@ async function handleTasks(chatId: number) {
     .from("task_assignments")
     .select("id, status, tasks:task_id ( title, deadline )")
     .eq("member_id", member.id)
-    .in("status", ["sent", "accepted", "help_needed", "overdue"])
+    .in("status", ["sent", "accepted", "help_needed", "overdue", "submitted"])
     .order("created_at", { ascending: true });
 
   const rows = (data ?? []) as unknown as Array<{
@@ -152,13 +154,150 @@ async function handleComment(chatId: number, text: string) {
   return true;
 }
 
+/** Аккаунт сайта, стоящий за этим чатом: нужен, чтобы понять, кто принимает работу. */
+async function reviewerByChat(chatId: number) {
+  const member = await memberByChat(chatId);
+  if (!member) return null;
+
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("member_id", member.id)
+    .maybeSingle();
+  if (!profile) return null;
+
+  const { data: roles } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", profile.id);
+
+  return {
+    userId: profile.id,
+    isVp: (roles ?? []).some((r) => r.role === "vp"),
+    fullName: member.full_name,
+  };
+}
+
+/** Принять или вернуть сданную работу. Кнопки видит только тот, кто выдал задачу. */
+async function handleReview(
+  update: NonNullable<TgUpdate["callback_query"]>,
+  approve: boolean,
+  assignmentId: string,
+) {
+  const chatId = update.message?.chat.id ?? update.from.id;
+
+  const { data } = await supabaseAdmin
+    .from("task_assignments")
+    .select(
+      "id, status, member_id, members:member_id ( full_name, telegram_chat_id ), tasks:task_id ( title, description, deadline, created_by, teams:team_id ( name ) )",
+    )
+    .eq("id", assignmentId)
+    .maybeSingle();
+
+  const row = data as unknown as {
+    id: string;
+    status: string;
+    member_id: string;
+    members: { full_name: string; telegram_chat_id: number | null } | null;
+    tasks: {
+      title: string;
+      description: string | null;
+      deadline: string;
+      created_by: string | null;
+      teams: { name: string } | null;
+    } | null;
+  } | null;
+
+  if (!row || !row.tasks) {
+    await answerCallbackQuery(update.id, "Задача не найдена");
+    return;
+  }
+
+  const reviewer = await reviewerByChat(chatId);
+  const allowed = reviewer && (reviewer.isVp || row.tasks.created_by === reviewer.userId);
+  if (!allowed) {
+    await answerCallbackQuery(update.id, "Принять может только тот, кто выдал джейдишку", true);
+    return;
+  }
+
+  if (row.status !== "submitted") {
+    await answerCallbackQuery(update.id, "Эта работа уже проверена");
+    return;
+  }
+
+  const now = new Date().toISOString();
+  await supabaseAdmin
+    .from("task_assignments")
+    .update(
+      approve
+        ? { status: "done", done_at: now, reviewed_at: now, reviewed_by: reviewer.userId }
+        : {
+            status: "accepted",
+            done_at: null,
+            submitted_at: null,
+            reviewed_at: now,
+            reviewed_by: reviewer.userId,
+          },
+    )
+    .eq("id", assignmentId);
+
+  await logActivity(
+    assignmentId,
+    row.member_id,
+    approve ? "Работа принята" : "Возвращено на доработку",
+  );
+
+  const memberName = escapeHtml(row.members?.full_name ?? "Мембер");
+  const title = escapeHtml(row.tasks.title);
+
+  if (update.message?.message_id) {
+    await editMessageText(
+      chatId,
+      update.message.message_id,
+      approve
+        ? `👍 Принято: «${title}» от ${memberName}`
+        : `↩️ Возвращено на доработку: «${title}» от ${memberName}`,
+      [],
+    );
+  }
+
+  if (row.members?.telegram_chat_id) {
+    if (approve) {
+      await sendMessage(
+        row.members.telegram_chat_id,
+        `👍 Твою работу по «${title}» приняли. Красавчик!`,
+      );
+    } else {
+      const text = taskMessage({
+        title: row.tasks.title,
+        description: row.tasks.description,
+        teamName: row.tasks.teams?.name ?? "MXP",
+        deadline: row.tasks.deadline,
+        prefix: "↩️ <b>Вернули на доработку</b>",
+      });
+      await sendMessage(
+        row.members.telegram_chat_id,
+        `${text}\n\n${STATUS_LINE["accepted"]}`,
+        keyboardFor("accepted", assignmentId),
+      );
+    }
+  }
+
+  await answerCallbackQuery(update.id, approve ? "Принято 👍" : "Вернул на доработку");
+}
+
 async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
   const raw = update.data ?? "";
   const [action, assignmentId] = raw.split(":");
   const chatId = update.message?.chat.id ?? update.from.id;
 
-  if (!assignmentId || !["acc", "done", "help"].includes(action ?? "")) {
+  if (!assignmentId || !["acc", "done", "help", "ok", "ret"].includes(action ?? "")) {
     await answerCallbackQuery(update.id, "Неизвестное действие");
+    return;
+  }
+
+  if (action === "ok" || action === "ret") {
+    await handleReview(update, action === "ok", assignmentId);
     return;
   }
 
@@ -196,7 +335,7 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
   }
 
   const now = new Date().toISOString();
-  let status: "accepted" | "done" | "help_needed" = "accepted";
+  let status: "accepted" | "submitted" | "help_needed" = "accepted";
   let toast = "Принято ✅";
   const patch: Record<string, unknown> = {};
 
@@ -205,10 +344,9 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
     patch["accepted_at"] = now;
     toast = "Принято ✅";
   } else if (action === "done") {
-    status = "done";
-    patch["done_at"] = now;
-    patch["awaiting_comment"] = true;
-    toast = "Красавчик! 🏁";
+    status = "submitted";
+    patch["submitted_at"] = now;
+    toast = "Отправил на проверку 🕓";
   } else {
     status = "help_needed";
     toast = "Сообщил тимлиду 🆘";
@@ -222,11 +360,7 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
   await logActivity(
     assignmentId,
     row.member_id,
-    action === "acc"
-      ? "Принял задачу"
-      : action === "done"
-        ? "Отметил выполненной"
-        : "Запросил помощь",
+    action === "acc" ? "Принял задачу" : action === "done" ? "Сдал на проверку" : "Запросил помощь",
   );
 
   const baseText = taskMessage({
@@ -253,8 +387,18 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
     );
   }
 
-  if (status === "done") {
-    await sendMessage(chatId, "Можешь отправить ссылку или комментарий к результату (или /skip)");
+  if (status === "submitted") {
+    await notifyTaskCreator(
+      row.tasks.created_by,
+      [
+        "🕓 <b>Сдали работу</b>",
+        "",
+        `${escapeHtml(row.members?.full_name ?? "Мембер")} сдал «${escapeHtml(row.tasks.title)}»`,
+        "",
+        "Проверь и прими работу или верни на доработку.",
+      ].join("\n"),
+      reviewKeyboard(assignmentId),
+    );
   }
 
   await answerCallbackQuery(update.id, toast);

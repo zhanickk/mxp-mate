@@ -62,7 +62,8 @@ function MemberProfile() {
     return {
       total: rows.length,
       done: done.length,
-      open: rows.filter((r) => ["sent", "accepted", "help_needed"].includes(r.status)).length,
+      open: rows.filter((r) => ["sent", "accepted", "help_needed", "submitted"].includes(r.status))
+        .length,
       overdue: rows.filter((r) => r.status === "overdue").length,
       rate: rows.length ? Math.round((done.length / rows.length) * 100) : 0,
       onTime: done.length ? Math.round((onTime / done.length) * 100) : 0,

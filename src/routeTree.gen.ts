@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as TemplatesRouteImport } from './routes/templates'
+import { Route as ClaimMemberIdRouteImport } from './routes/claim/$memberId'
 import { Route as MembersIndexRouteImport } from './routes/members/index'
 import { Route as MembersMemberIdRouteImport } from './routes/members/$memberId'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
@@ -36,6 +38,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamsRoute = TeamsRouteImport.update({
   id: '/teams',
   path: '/teams',
@@ -44,6 +51,11 @@ const TeamsRoute = TeamsRouteImport.update({
 const TemplatesRoute = TemplatesRouteImport.update({
   id: '/templates',
   path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClaimMemberIdRoute = ClaimMemberIdRouteImport.update({
+  id: '/claim/$memberId',
+  path: '/claim/$memberId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MembersIndexRoute = MembersIndexRouteImport.update({
@@ -82,8 +94,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
+  '/stats': typeof StatsRoute
   '/teams': typeof TeamsRoute
   '/templates': typeof TemplatesRoute
+  '/claim/$memberId': typeof ClaimMemberIdRoute
   '/members/$memberId': typeof MembersMemberIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/members/': typeof MembersIndexRoute
@@ -95,8 +109,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
+  '/stats': typeof StatsRoute
   '/teams': typeof TeamsRoute
   '/templates': typeof TemplatesRoute
+  '/claim/$memberId': typeof ClaimMemberIdRoute
   '/members/$memberId': typeof MembersMemberIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/members': typeof MembersIndexRoute
@@ -109,8 +125,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
+  '/stats': typeof StatsRoute
   '/teams': typeof TeamsRoute
   '/templates': typeof TemplatesRoute
+  '/claim/$memberId': typeof ClaimMemberIdRoute
   '/members/$memberId': typeof MembersMemberIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/members/': typeof MembersIndexRoute
@@ -124,8 +142,10 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/settings'
+    | '/stats'
     | '/teams'
     | '/templates'
+    | '/claim/$memberId'
     | '/members/$memberId'
     | '/tasks/$taskId'
     | '/members/'
@@ -137,8 +157,10 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/settings'
+    | '/stats'
     | '/teams'
     | '/templates'
+    | '/claim/$memberId'
     | '/members/$memberId'
     | '/tasks/$taskId'
     | '/members'
@@ -150,8 +172,10 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/settings'
+    | '/stats'
     | '/teams'
     | '/templates'
+    | '/claim/$memberId'
     | '/members/$memberId'
     | '/tasks/$taskId'
     | '/members/'
@@ -164,8 +188,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   SettingsRoute: typeof SettingsRoute
+  StatsRoute: typeof StatsRoute
   TeamsRoute: typeof TeamsRoute
   TemplatesRoute: typeof TemplatesRoute
+  ClaimMemberIdRoute: typeof ClaimMemberIdRoute
   MembersMemberIdRoute: typeof MembersMemberIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   MembersIndexRoute: typeof MembersIndexRoute
@@ -197,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teams': {
       id: '/teams'
       path: '/teams'
@@ -209,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/templates'
       fullPath: '/templates'
       preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/claim/$memberId': {
+      id: '/claim/$memberId'
+      path: '/claim/$memberId'
+      fullPath: '/claim/$memberId'
+      preLoaderRoute: typeof ClaimMemberIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/members/': {
@@ -260,8 +300,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   SettingsRoute: SettingsRoute,
+  StatsRoute: StatsRoute,
   TeamsRoute: TeamsRoute,
   TemplatesRoute: TemplatesRoute,
+  ClaimMemberIdRoute: ClaimMemberIdRoute,
   MembersMemberIdRoute: MembersMemberIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   MembersIndexRoute: MembersIndexRoute,

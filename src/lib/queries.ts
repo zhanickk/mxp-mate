@@ -10,7 +10,7 @@ export type Template = Tables<"task_templates">;
 
 export type AssignmentWithRefs = Assignment & {
   members: Pick<Member, "id" | "full_name" | "team_id" | "position"> | null;
-  tasks: Pick<Task, "id" | "title" | "deadline" | "team_id" | "category"> | null;
+  tasks: Pick<Task, "id" | "title" | "deadline" | "team_id" | "category" | "created_by"> | null;
 };
 
 async function must<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>) {
@@ -56,7 +56,7 @@ export function useAssignments() {
         supabase
           .from("task_assignments")
           .select(
-            "*, members(id, full_name, team_id, position), tasks(id, title, deadline, team_id, category)",
+            "*, members(id, full_name, team_id, position), tasks(id, title, deadline, team_id, category, created_by)",
           )
           .order("created_at", { ascending: false }),
       ),
@@ -150,6 +150,7 @@ export function aggregateStatus(rows: { status: string }[]): string {
   if (s.every((x) => x === "done")) return "done";
   if (s.includes("help_needed")) return "help_needed";
   if (s.includes("overdue")) return "overdue";
+  if (s.includes("submitted")) return "submitted";
   if (s.some((x) => x === "accepted" || x === "done")) return "accepted";
   if (s.every((x) => x === "not_delivered")) return "not_delivered";
   return "sent";

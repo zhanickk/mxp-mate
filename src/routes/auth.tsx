@@ -29,7 +29,27 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (session) void navigate({ to: "/" });
+    if (!session) return;
+
+    // Если человек пришёл по персональной ссылке на свою позицию, возвращаем его туда.
+    let pending: { memberId?: string; code?: string } | null = null;
+    try {
+      const raw = window.localStorage.getItem("mxp_pending_claim");
+      pending = raw ? (JSON.parse(raw) as { memberId?: string; code?: string }) : null;
+    } catch {
+      pending = null;
+    }
+
+    if (pending?.memberId) {
+      void navigate({
+        to: "/claim/$memberId",
+        params: { memberId: pending.memberId },
+        search: { code: pending.code ?? "" },
+      });
+      return;
+    }
+
+    void navigate({ to: "/" });
   }, [session, navigate]);
 
   async function signIn(e: React.FormEvent) {
@@ -156,7 +176,8 @@ function AuthPage() {
                   Создать аккаунт
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Первый зарегистрированный аккаунт автоматически получает роль VP.
+                  Если тебе прислали персональную ссылку на твою позицию, зарегистрируйся здесь:
+                  после создания аккаунта доступ выдастся сам.
                 </p>
               </form>
             </TabsContent>

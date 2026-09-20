@@ -11,7 +11,9 @@ import {
   MessageSquareText,
   Repeat,
   Send,
+  ThumbsUp,
   Trash2,
+  Undo2,
   UsersRound,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -39,7 +41,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { resendTask, sendReminder } from "@/lib/telegram.functions";
+import { resendTask, reviewAssignment, sendReminder } from "@/lib/telegram.functions";
+import { useAuth } from "@/hooks/useAuth";
+import { Textarea } from "@/components/ui/textarea";
 import { useAssignmentsRealtime } from "@/hooks/useRealtime";
 import {
   aggregateStatus,
@@ -58,7 +62,14 @@ export const Route = createFileRoute("/tasks/$taskId")({
   component: TaskDetail,
 });
 
-const MANUAL_STATUSES = ["sent", "accepted", "done", "help_needed", "overdue"] as const;
+const MANUAL_STATUSES = [
+  "sent",
+  "accepted",
+  "submitted",
+  "done",
+  "help_needed",
+  "overdue",
+] as const;
 type ManualStatus = (typeof MANUAL_STATUSES)[number];
 
 function TaskDetail() {
@@ -74,7 +85,11 @@ function TaskDetail() {
 
   const resend = useServerFn(resendTask);
   const remind = useServerFn(sendReminder);
+  const review = useServerFn(reviewAssignment);
+  const { profile, isVp } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
+  const [returnFor, setReturnFor] = useState<string | null>(null);
+  const [returnNote, setReturnNote] = useState("");
 
   if (isLoading) {
     return (
@@ -106,6 +121,7 @@ function TaskDetail() {
   const overall = aggregateStatus(rows);
   const teamName = teams.find((t) => t.id === task.team_id)?.name ?? "Весь MXP";
   const creator = profiles.find((p) => p.id === task.created_by)?.full_name ?? "-";
+  const canReview = isVp || task.created_by === profile?.id;
   const nameById = new Map(rows.map((r) => [r.member_id, r.members?.full_name ?? "-"]));
 
   async function refresh() {
@@ -158,6 +174,27 @@ function TaskDetail() {
     });
     toast.success("Статус обновлён");
     await refresh();
+  }
+
+  async function doReview(id: string, approve: boolean, comment?: string) {
+    setBusy(`v-${id}`);
+    try {
+      await review({
+        data: {
+          assignment_id: id,
+          approve,
+          ...(comment?.trim() ? { comment: comment.trim() } : {}),
+        },
+      });
+      toast.success(approve ? "Работа принята" : "Вернул на доработку");
+      setReturnFor(null);
+      setReturnNote("");
+      await refresh();
+    } catch (e) {
+      toast.error("Не получилось", { description: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function deleteTask() {
@@ -339,6 +376,61 @@ function TaskDetail() {
                     <MessageSquareText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                     <p className="whitespace-pre-wrap break-words">{r.comment}</p>
                   </div>
+                ) : null}
+                {r.status === "submitted" ? (
+                  canReview ? (
+                    <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <p className="text-xs font-medium text-foreground">
+                        Сдал на проверку. Принять работу или вернуть на доработку?
+                      </p>
+                      {returnFor === r.id ? (
+                        <div className="mt-2 space-y-2">
+                          <Textarea
+                            rows={2}
+                            value={returnNote}
+                            onChange={(e) => setReturnNote(e.target.value)}
+                            placeholder="Что доделать? Комментарий уйдёт мемберу в бот."
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              disabled={busy === `v-${r.id}`}
+                              onClick={() => void doReview(r.id, false, returnNote)}
+                            >
+                              Вернуть на доработку
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setReturnFor(null);
+                                setReturnNote("");
+                              }}
+                            >
+                              Отмена
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            disabled={busy === `v-${r.id}`}
+                            onClick={() => void doReview(r.id, true)}
+                          >
+                            <ThumbsUp className="size-4" /> Принять
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setReturnFor(r.id)}>
+                            <Undo2 className="size-4" /> Вернуть
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Ждёт проверки от того, кто выдал задачу.
+                    </p>
+                  )
                 ) : null}
               </div>
             ))}

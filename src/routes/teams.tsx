@@ -37,7 +37,9 @@ function TeamsPage() {
           perMember,
           total: rows.length,
           done,
-          open: rows.filter((a) => ["sent", "accepted", "help_needed"].includes(a.status)).length,
+          open: rows.filter((a) =>
+            ["sent", "accepted", "help_needed", "submitted"].includes(a.status),
+          ).length,
           overdue: rows.filter((a) => a.status === "overdue").length,
           connected: ms.filter((m) => m.telegram_chat_id).length,
         };

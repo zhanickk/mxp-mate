@@ -2,7 +2,8 @@ import { cn } from "@/lib/utils";
 
 export const STATUS_LABEL: Record<string, string> = {
   sent: "Отправлено",
-  accepted: "Принято",
+  accepted: "В работе",
+  submitted: "На проверке",
   done: "Выполнено",
   help_needed: "Нужна помощь",
   overdue: "Просрочено",
@@ -12,6 +13,7 @@ export const STATUS_LABEL: Record<string, string> = {
 const STATUS_CLASS: Record<string, string> = {
   sent: "bg-muted text-muted-foreground",
   accepted: "bg-primary/10 text-primary",
+  submitted: "bg-accent/20 text-accent-foreground",
   done: "bg-success/15 text-success",
   help_needed: "bg-warning/25 text-warning-foreground",
   overdue: "bg-destructive/12 text-destructive",

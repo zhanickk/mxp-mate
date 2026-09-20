@@ -1,5 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
+  BarChart3,
   LayoutDashboard,
   ListChecks,
   Users,
@@ -22,6 +23,7 @@ const NAV_ALL = [
   { to: "/tasks", label: "Задачи", icon: ListChecks },
   { to: "/members", label: "Мемберы", icon: Users },
   { to: "/teams", label: "Команды", icon: UsersRound },
+  { to: "/stats", label: "Статистика", icon: BarChart3 },
   { to: "/templates", label: "Шаблоны", icon: FileText },
   { to: "/settings", label: "Настройки", icon: Settings },
 ] as const;
