@@ -251,6 +251,7 @@ export type Database = {
       task_templates: {
         Row: {
           category: string | null
+          checklist: string[]
           created_at: string
           default_deadline_days: number
           description: string | null
@@ -260,6 +261,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          checklist?: string[]
           created_at?: string
           default_deadline_days?: number
           description?: string | null
@@ -269,6 +271,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          checklist?: string[]
           created_at?: string
           default_deadline_days?: number
           description?: string | null
@@ -286,9 +289,85 @@ export type Database = {
           },
         ]
       }
+      assignment_steps: {
+        Row: {
+          assignment_id: string
+          done_at: string | null
+          id: string
+          idx: number
+          title: string
+        }
+        Insert: {
+          assignment_id: string
+          done_at?: string | null
+          id?: string
+          idx: number
+          title: string
+        }
+        Update: {
+          assignment_id?: string
+          done_at?: string | null
+          id?: string
+          idx?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_steps_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lc_people: {
+        Row: {
+          birthday: string | null
+          created_at: string
+          department: string | null
+          full_name: string
+          id: string
+          instagram: string | null
+          is_active: boolean
+          music_app: string | null
+          note: string | null
+          position: string | null
+          telegram_username: string | null
+        }
+        Insert: {
+          birthday?: string | null
+          created_at?: string
+          department?: string | null
+          full_name: string
+          id?: string
+          instagram?: string | null
+          is_active?: boolean
+          music_app?: string | null
+          note?: string | null
+          position?: string | null
+          telegram_username?: string | null
+        }
+        Update: {
+          birthday?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string
+          id?: string
+          instagram?: string | null
+          is_active?: boolean
+          music_app?: string | null
+          note?: string | null
+          position?: string | null
+          telegram_username?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
+          birthday_person_id: string | null
           category: string | null
+          checklist: string[]
           created_at: string
           created_by: string | null
           deadline: string
@@ -301,7 +380,9 @@ export type Database = {
           title: string
         }
         Insert: {
+          birthday_person_id?: string | null
           category?: string | null
+          checklist?: string[]
           created_at?: string
           created_by?: string | null
           deadline: string
@@ -314,7 +395,9 @@ export type Database = {
           title: string
         }
         Update: {
+          birthday_person_id?: string | null
           category?: string | null
+          checklist?: string[]
           created_at?: string
           created_by?: string | null
           deadline?: string
@@ -442,6 +525,7 @@ export type Database = {
         }[]
       }
       my_member_id: { Args: never; Returns: string }
+      toggle_step: { Args: { _done: boolean; _step_id: string }; Returns: undefined }
       my_team_id: { Args: never; Returns: string }
       review_assignment: {
         Args: { _approve: boolean; _assignment_id: string; _comment?: string }

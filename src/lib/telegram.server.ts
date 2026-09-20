@@ -148,12 +148,66 @@ export const STATUS_LINE: Record<string, string> = {
   not_delivered: "⚠️ Статус: не доставлено",
 };
 
+export type Step = { id: string; idx: number; title: string; done_at: string | null };
+
+const MONTHS_GEN = [
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
+];
+
+/** Сколько дней до ближайшего дня рождения, по календарю Астаны. */
+export function daysUntilBirthday(birthday: string | null | undefined): number | null {
+  if (!birthday) return null;
+  const [, month, day] = birthday.split("-").map(Number);
+  if (!month || !day) return null;
+
+  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Almaty" }).format(new Date());
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const today = Date.UTC(ty ?? 1970, (tm ?? 1) - 1, td ?? 1);
+
+  let next = Date.UTC(ty ?? 1970, month - 1, day);
+  if (next < today) next = Date.UTC((ty ?? 1970) + 1, month - 1, day);
+  return Math.round((next - today) / 86_400_000);
+}
+
+/** «23 июня» из даты рождения. */
+export function birthdayLabel(birthday: string | null | undefined): string {
+  if (!birthday) return "-";
+  const [, month, day] = birthday.split("-").map(Number);
+  if (!month || !day) return "-";
+  return `${day} ${MONTHS_GEN[month - 1] ?? ""}`.trim();
+}
+
+/** Строка вида «Этапы: 2 из 6» плюс сам список с галочками. */
+export function stepLines(steps: Step[]): string[] {
+  if (steps.length === 0) return [];
+  const done = steps.filter((s) => s.done_at).length;
+  return [
+    "",
+    `📋 <b>Этапы: ${done} из ${steps.length}</b>`,
+    ...[...steps]
+      .sort((a, b) => a.idx - b.idx)
+      .map((s) => `${s.done_at ? "☑️" : "▫️"} ${escapeHtml(s.title)}`),
+  ];
+}
+
 export function taskMessage(opts: {
   title: string;
   description?: string | null | undefined;
   teamName?: string | null | undefined;
   deadline: string;
   prefix?: string | undefined;
+  steps?: Step[] | undefined;
 }): string {
   const lines = [
     `${opts.prefix ?? "📌 <b>Новая джейдишка</b>"}`,
@@ -163,6 +217,7 @@ export function taskMessage(opts: {
   if (opts.description) lines.push(escapeHtml(opts.description));
   lines.push("", `👥 ${escapeHtml(opts.teamName ?? "MXP")}`);
   lines.push(`⏰ Дедлайн: ${almaty(opts.deadline)} (Астана)`);
+  lines.push(...stepLines(opts.steps ?? []));
   return lines.join("\n");
 }
 
@@ -176,21 +231,51 @@ export function reviewKeyboard(assignmentId: string): InlineButton[][] {
   ];
 }
 
-export function keyboardFor(status: string, assignmentId: string): InlineButton[][] {
+export function keyboardFor(
+  status: string,
+  assignmentId: string,
+  steps: Step[] = [],
+): InlineButton[][] {
   if (status === "done" || status === "submitted") return [];
-  if (status === "accepted" || status === "help_needed") {
-    return [
-      [
-        { text: "🏁 Сделал", callback_data: `done:${assignmentId}` },
-        { text: "🆘 Нужна помощь", callback_data: `help:${assignmentId}` },
-      ],
-    ];
+
+  const rows: InlineButton[][] =
+    status === "accepted" || status === "help_needed"
+      ? [
+          [
+            { text: "🏁 Сделал", callback_data: `done:${assignmentId}` },
+            { text: "🆘 Нужна помощь", callback_data: `help:${assignmentId}` },
+          ],
+        ]
+      : [
+          [
+            { text: "✅ Принял", callback_data: `acc:${assignmentId}` },
+            { text: "🏁 Сделал", callback_data: `done:${assignmentId}` },
+          ],
+          [{ text: "🆘 Нужна помощь", callback_data: `help:${assignmentId}` }],
+        ];
+
+  if (steps.length > 0) {
+    const done = steps.filter((s) => s.done_at).length;
+    rows.push([
+      {
+        text: `📋 Отметить этап (${done}/${steps.length})`,
+        callback_data: `steps:${assignmentId}`,
+      },
+    ]);
   }
-  return [
-    [
-      { text: "✅ Принял", callback_data: `acc:${assignmentId}` },
-      { text: "🏁 Сделал", callback_data: `done:${assignmentId}` },
-    ],
-    [{ text: "🆘 Нужна помощь", callback_data: `help:${assignmentId}` }],
-  ];
+  return rows;
+}
+
+/** Экран выбора этапа: по кнопке на шаг плюс возврат к задаче. */
+export function stepsKeyboard(assignmentId: string, steps: Step[]): InlineButton[][] {
+  const rows: InlineButton[][] = [...steps]
+    .sort((a, b) => a.idx - b.idx)
+    .map((s) => [
+      {
+        text: `${s.done_at ? "☑️" : "▫️"} ${s.title.slice(0, 40)}`,
+        callback_data: `st:${s.id}`,
+      },
+    ]);
+  rows.push([{ text: "⬅️ Назад к задаче", callback_data: `bk:${assignmentId}` }]);
+  return rows;
 }

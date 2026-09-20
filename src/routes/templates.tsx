@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { FileText, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EmptyState } from "@/components/EmptyState";
 import { NewTaskDialog, type TaskDraft } from "@/components/NewTaskDialog";
@@ -130,6 +130,7 @@ function TemplatesPage() {
                                 deadlineIso: new Date(
                                   Date.now() + t.default_deadline_days * 86_400_000,
                                 ).toISOString(),
+                                checklist: t.checklist ?? [],
                               });
                               setTaskOpen(true);
                             }}
@@ -188,6 +189,7 @@ function TemplateDialog({
   const [category, setCategory] = useState("Другое");
   const [teamId, setTeamId] = useState("none");
   const [days, setDays] = useState(7);
+  const [checklist, setChecklist] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -196,6 +198,7 @@ function TemplateDialog({
     setCategory(template?.category ?? "Другое");
     setTeamId(template?.team_id ?? "none");
     setDays(template?.default_deadline_days ?? 7);
+    setChecklist(template?.checklist ?? []);
   }, [open, template]);
 
   async function save() {
@@ -209,6 +212,7 @@ function TemplateDialog({
       category,
       team_id: teamId === "none" ? null : teamId,
       default_deadline_days: Math.max(0, days),
+      checklist: checklist.map((c) => c.trim()).filter(Boolean),
     };
     const { error } = template
       ? await supabase.from("task_templates").update(payload).eq("id", template.id)
@@ -241,6 +245,47 @@ function TemplateDialog({
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Этапы</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setChecklist((prev) => [...prev, ""])}
+              >
+                <Plus className="size-4" /> Добавить
+              </Button>
+            </div>
+            {checklist.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Этапы попадут в каждую задачу из этого шаблона, и мембер будет отмечать их в боте.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {checklist.map((step, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input
+                      value={step}
+                      placeholder={`Этап ${i + 1}`}
+                      onChange={(e) =>
+                        setChecklist((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setChecklist((prev) => prev.filter((_, j) => j !== i))}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label>Категория</Label>

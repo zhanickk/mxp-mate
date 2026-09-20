@@ -7,6 +7,8 @@ export type Member = Tables<"members">;
 export type Task = Tables<"tasks">;
 export type Assignment = Tables<"task_assignments">;
 export type Template = Tables<"task_templates">;
+export type LcPerson = Tables<"lc_people">;
+export type AssignmentStep = Tables<"assignment_steps">;
 
 export type AssignmentWithRefs = Assignment & {
   members: Pick<Member, "id" | "full_name" | "team_id" | "position"> | null;
@@ -30,6 +32,28 @@ export function useMembers() {
   return useQuery({
     queryKey: ["members"],
     queryFn: () => must<Member[]>(supabase.from("members").select("*").order("full_name")),
+  });
+}
+
+export function useLcPeople() {
+  return useQuery({
+    queryKey: ["lc_people"],
+    queryFn: () => must<LcPerson[]>(supabase.from("lc_people").select("*").order("full_name")),
+  });
+}
+
+export function useAssignmentSteps(assignmentIds: string[]) {
+  return useQuery({
+    queryKey: ["assignment_steps", assignmentIds.join(",")],
+    enabled: assignmentIds.length > 0,
+    queryFn: () =>
+      must<AssignmentStep[]>(
+        supabase
+          .from("assignment_steps")
+          .select("*")
+          .in("assignment_id", assignmentIds)
+          .order("idx"),
+      ),
   });
 }
 

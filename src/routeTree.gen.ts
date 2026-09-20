@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BirthdaysRouteImport } from './routes/birthdays'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as TeamsRouteImport } from './routes/teams'
@@ -31,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BirthdaysRoute = BirthdaysRouteImport.update({
+  id: '/birthdays',
+  path: '/birthdays',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -93,6 +99,7 @@ const ApiPublicTelegramWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/birthdays': typeof BirthdaysRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/teams': typeof TeamsRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/birthdays': typeof BirthdaysRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/teams': typeof TeamsRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/birthdays': typeof BirthdaysRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/teams': typeof TeamsRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/birthdays'
     | '/settings'
     | '/stats'
     | '/teams'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/birthdays'
     | '/settings'
     | '/stats'
     | '/teams'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/birthdays'
     | '/settings'
     | '/stats'
     | '/teams'
@@ -187,6 +199,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  BirthdaysRoute: typeof BirthdaysRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
   TeamsRoute: typeof TeamsRoute
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/birthdays': {
+      id: '/birthdays'
+      path: '/birthdays'
+      fullPath: '/birthdays'
+      preLoaderRoute: typeof BirthdaysRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -299,6 +319,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  BirthdaysRoute: BirthdaysRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
   TeamsRoute: TeamsRoute,

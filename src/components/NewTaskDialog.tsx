@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { GripVertical, Plus, Sparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTask } from "@/lib/telegram.functions";
 import { useAuth } from "@/hooks/useAuth";
-import { CATEGORIES, useMembers, useTeams, useTemplates } from "@/lib/queries";
+import { CATEGORIES, useLcPeople, useMembers, useTeams, useTemplates } from "@/lib/queries";
+import { daysUntilBirthday } from "@/lib/dates";
 import { almatyInputToIso, isoToAlmatyInputs } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,9 @@ export type TaskDraft = {
   category?: string;
   memberIds?: string[];
   deadlineIso?: string;
+  checklist?: string[];
+  birthdayPersonId?: string;
+  templateId?: string;
 };
 
 function defaultDeadline(days = 3) {
@@ -57,6 +61,7 @@ export function NewTaskDialog({
   const { data: members = [] } = useMembers();
   const { data: teams = [] } = useTeams();
   const { data: templates = [] } = useTemplates();
+  const { data: lcPeople = [] } = useLcPeople();
 
   const [templateId, setTemplateId] = useState("blank");
   const [title, setTitle] = useState("");
@@ -67,6 +72,8 @@ export function NewTaskDialog({
   const [time, setTime] = useState("18:00");
   const [selected, setSelected] = useState<string[]>([]);
   const [recurring, setRecurring] = useState(false);
+  const [checklist, setChecklist] = useState<string[]>([]);
+  const [birthdayPersonId, setBirthdayPersonId] = useState<string>("none");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -81,6 +88,10 @@ export function NewTaskDialog({
     setTime(d.time || "18:00");
     setSelected(draft?.memberIds ?? []);
     setRecurring(false);
+    setChecklist(draft?.checklist ?? []);
+    setBirthdayPersonId(draft?.birthdayPersonId ?? "none");
+    if (draft?.templateId) applyTemplate(draft.templateId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, draft, isVp, profile?.team_id]);
 
   const activeMembers = useMemo(() => members.filter((m) => m.is_active), [members]);
@@ -94,7 +105,19 @@ export function NewTaskDialog({
     setCategory(tpl.category ?? "Другое");
     if (tpl.team_id) setTeamId(tpl.team_id);
     setDate(defaultDeadline(tpl.default_deadline_days).date);
+    setChecklist(tpl.checklist ?? []);
   }
+
+  const birthdayPerson = lcPeople.find((p) => p.id === birthdayPersonId);
+
+  /** Ближайшие именинники сверху, остальные по алфавиту. */
+  const peopleSorted = useMemo(() => {
+    return [...lcPeople]
+      .filter((p) => p.is_active)
+      .map((p) => ({ p, days: p.birthday ? daysUntilBirthday(p.birthday) : 999 }))
+      .sort((a, b) => a.days - b.days)
+      .slice(0, 40);
+  }, [lcPeople]);
 
   function toggle(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -131,6 +154,8 @@ export function NewTaskDialog({
           created_by: profile?.id ?? null,
           is_recurring: recurring,
           recurrence: recurring ? "weekly" : null,
+          checklist: checklist.map((c) => c.trim()).filter(Boolean),
+          birthday_person_id: birthdayPersonId === "none" ? null : birthdayPersonId,
         })
         .select("id")
         .single();
@@ -204,6 +229,77 @@ export function NewTaskDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Этапы</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setChecklist((prev) => [...prev, ""])}
+              >
+                <Plus className="size-4" /> Добавить этап
+              </Button>
+            </div>
+            {checklist.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Без этапов задача остаётся одной галочкой. С этапами видно, на чём человек застрял.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {checklist.map((step, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <GripVertical className="size-4 shrink-0 text-muted-foreground" />
+                    <Input
+                      value={step}
+                      placeholder={`Этап ${i + 1}`}
+                      onChange={(e) =>
+                        setChecklist((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setChecklist((prev) => prev.filter((_, j) => j !== i))}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Именинник</Label>
+            <Select value={birthdayPersonId} onValueChange={setBirthdayPersonId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Не привязано" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Не привязано</SelectItem>
+                {peopleSorted.map(({ p, days }) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.full_name}
+                    {p.birthday ? ` · через ${days} дн.` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {birthdayPerson ? (
+              <p className="text-xs text-muted-foreground">
+                {[
+                  birthdayPerson.department,
+                  birthdayPerson.music_app ? `слушает ${birthdayPerson.music_app}` : null,
+                  birthdayPerson.instagram ? `@${birthdayPerson.instagram}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

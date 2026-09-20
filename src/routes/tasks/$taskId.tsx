@@ -9,8 +9,10 @@ import {
   CalendarClock,
   History,
   MessageSquareText,
+  CheckSquare,
   Repeat,
   Send,
+  Square,
   ThumbsUp,
   Trash2,
   Undo2,
@@ -49,6 +51,7 @@ import {
   aggregateStatus,
   initials,
   useActivity,
+  useAssignmentSteps,
   useProfiles,
   useTask,
   useTaskAssignments,
@@ -81,6 +84,7 @@ function TaskDetail() {
   const { data: teams = [] } = useTeams();
   const { data: profiles = [] } = useProfiles();
   const { data: activity = [] } = useActivity(rows.map((r) => r.id));
+  const { data: steps = [] } = useAssignmentSteps(rows.map((r) => r.id));
   useAssignmentsRealtime();
 
   const resend = useServerFn(resendTask);
@@ -174,6 +178,15 @@ function TaskDetail() {
     });
     toast.success("Статус обновлён");
     await refresh();
+  }
+
+  async function toggleStep(stepId: string, done: boolean) {
+    const { error } = await supabase.rpc("toggle_step", { _step_id: stepId, _done: done });
+    if (error) {
+      toast.error("Не удалось отметить этап", { description: error.message });
+      return;
+    }
+    await qc.invalidateQueries({ queryKey: ["assignment_steps"] });
   }
 
   async function doReview(id: string, approve: boolean, comment?: string) {
@@ -371,6 +384,51 @@ function TaskDetail() {
                     </Button>
                   </div>
                 </div>
+                {(() => {
+                  const mine = steps
+                    .filter((x) => x.assignment_id === r.id)
+                    .sort((a, b) => a.idx - b.idx);
+                  if (mine.length === 0) return null;
+                  const doneCount = mine.filter((x) => x.done_at).length;
+                  return (
+                    <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-foreground">Этапы</p>
+                        <span className="text-xs text-muted-foreground">
+                          {doneCount} из {mine.length}
+                        </span>
+                      </div>
+                      <Progress value={(doneCount / mine.length) * 100} className="mt-2 h-1.5" />
+                      <ul className="mt-3 space-y-1.5">
+                        {mine.map((st) => (
+                          <li key={st.id}>
+                            <button
+                              type="button"
+                              className="flex w-full items-start gap-2 text-left text-sm"
+                              onClick={() => void toggleStep(st.id, !st.done_at)}
+                            >
+                              {st.done_at ? (
+                                <CheckSquare className="mt-0.5 size-4 shrink-0 text-success" />
+                              ) : (
+                                <Square className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                              )}
+                              <span
+                                className={cn(
+                                  "min-w-0 flex-1",
+                                  st.done_at
+                                    ? "text-muted-foreground line-through"
+                                    : "text-foreground",
+                                )}
+                              >
+                                {st.title}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
                 {r.comment ? (
                   <div className="mt-3 flex gap-2 rounded-lg bg-muted/60 p-3 text-sm text-foreground">
                     <MessageSquareText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />

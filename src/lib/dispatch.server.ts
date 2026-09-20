@@ -9,6 +9,7 @@ import {
   almaty,
   escapeHtml,
   type InlineButton,
+  type Step,
 } from "./telegram.server";
 
 type AssignmentStatus = Database["public"]["Enums"]["assignment_status"];
@@ -24,6 +25,7 @@ export type AssignmentRow = {
 const ASSIGNMENT_SELECT = `
   id, task_id, member_id, status, telegram_message_id, sent_at, reminder_sent,
   members:member_id ( id, full_name, telegram_chat_id ),
+  assignment_steps ( id, idx, title, done_at ),
   tasks:task_id ( id, title, description, deadline, team_id, created_by, teams:team_id ( name ) )
 `;
 
@@ -35,6 +37,7 @@ type LoadedAssignment = {
   telegram_message_id: number | null;
   reminder_sent: boolean;
   members: { id: string; full_name: string; telegram_chat_id: number | null } | null;
+  assignment_steps: Step[] | null;
   tasks: {
     id: string;
     title: string;
@@ -85,18 +88,24 @@ export async function dispatchAssignments(
       continue;
     }
 
+    const steps = row.assignment_steps ?? [];
     const text = taskMessage({
       title: task.title,
       description: task.description,
       teamName: task.teams?.name ?? "MXP",
       deadline: task.deadline,
       prefix: opts.prefix,
+      steps,
     });
 
     const nextStatus = (
       opts.resend && row.status !== "not_delivered" ? row.status : "sent"
     ) as AssignmentStatus;
-    const res = await sendMessage(member.telegram_chat_id, text, keyboardFor(nextStatus, row.id));
+    const res = await sendMessage(
+      member.telegram_chat_id,
+      text,
+      keyboardFor(nextStatus, row.id, steps),
+    );
 
     if (res.ok && res.result) {
       sent += 1;
@@ -137,14 +146,17 @@ export async function sendReminderFor(
   const chatId = row.members?.telegram_chat_id;
   if (!chatId) return { ok: false, reason: "У мембера не подключён Telegram" };
 
+  const steps = row.assignment_steps ?? [];
+  const doneSteps = steps.filter((x) => x.done_at).length;
   const text = [
     "⏰ <b>Напоминание</b>",
     "",
     `«${escapeHtml(row.tasks.title)}»`,
     `Дедлайн: ${almaty(row.tasks.deadline)} (Астана)`,
+    ...(steps.length ? [`📋 Этапы: ${doneSteps} из ${steps.length}`] : []),
   ].join("\n");
 
-  const res = await sendMessage(chatId, text, keyboardFor(row.status, row.id));
+  const res = await sendMessage(chatId, text, keyboardFor(row.status, row.id, steps));
   if (res.ok) await logActivity(row.id, row.member_id, "Отправлено напоминание");
   return { ok: res.ok, reason: res.description };
 }

@@ -194,13 +194,14 @@ async function runTick() {
     const mm = String(target.getUTCMonth() + 1).padStart(2, "0");
     const dd = String(target.getUTCDate()).padStart(2, "0");
 
-    const { data: members } = await supabaseAdmin
-      .from("members")
-      .select("full_name, birthday")
+    // Считаем по всему LC, а не только по MXP: поздравления делаем для всех.
+    const { data: people } = await supabaseAdmin
+      .from("lc_people")
+      .select("full_name, department, birthday, music_app, instagram")
       .eq("is_active", true)
       .not("birthday", "is", null);
 
-    const upcoming = (members ?? []).filter((m) => (m.birthday ?? "").slice(5) === `${mm}-${dd}`);
+    const upcoming = (people ?? []).filter((m) => (m.birthday ?? "").slice(5) === `${mm}-${dd}`);
     if (upcoming.length > 0) {
       const { data: staff } = await supabaseAdmin
         .from("profiles")
@@ -216,7 +217,12 @@ async function runTick() {
       const text = [
         "🎂 <b>Скоро дни рождения (через 3 дня)</b>",
         "",
-        ...upcoming.map((m) => `• ${escapeHtml(m.full_name)}`),
+        ...upcoming.map((m) => {
+          const extra = [m.department, m.music_app, m.instagram ? `@${m.instagram}` : null]
+            .filter(Boolean)
+            .join(" · ");
+          return `• <b>${escapeHtml(m.full_name)}</b>${extra ? `\n  ${escapeHtml(extra)}` : ""}`;
+        }),
         "",
         "Пора запускать поздравления!",
       ].join("\n");

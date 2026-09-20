@@ -5,12 +5,16 @@ import {
   editMessageText,
   escapeHtml,
   almaty,
+  birthdayLabel,
+  daysUntilBirthday,
   getWebhookSecret,
   keyboardFor,
   reviewKeyboard,
   sendMessage,
   STATUS_LINE,
+  stepsKeyboard,
   taskMessage,
+  type Step,
 } from "@/lib/telegram.server";
 import { logActivity, notifyTaskCreator } from "@/lib/dispatch.server";
 
@@ -33,6 +37,9 @@ const HELP_TEXT = [
   "",
   "Кнопки под задачей: ✅ Принял · 🏁 Сделал · 🆘 Нужна помощь",
   "После «Сделал» работа уходит на проверку тому, кто её выдал.",
+  "Если у задачи есть этапы, отмечай их кнопкой «Отметить этап».",
+  "",
+  "/birthdays: ближайшие дни рождения LC",
 ].join("\n");
 
 async function memberByChat(chatId: number) {
@@ -152,6 +159,149 @@ async function handleComment(chatId: number, text: string) {
   await logActivity(pending.id, member.id, "Добавлен комментарий к результату");
   await sendMessage(chatId, "Записал, спасибо! 🙌");
   return true;
+}
+
+/** Ближайшие дни рождения по всему LC. */
+async function handleBirthdays(chatId: number) {
+  const member = await memberByChat(chatId);
+  if (!member) {
+    await sendMessage(chatId, "Ты ещё не подключён. Попроси у тимлида персональную ссылку.");
+    return;
+  }
+
+  const { data } = await supabaseAdmin
+    .from("lc_people")
+    .select("full_name, department, birthday, music_app, instagram")
+    .eq("is_active", true)
+    .not("birthday", "is", null);
+
+  const upcoming = (data ?? [])
+    .map((p) => ({ ...p, days: daysUntilBirthday(p.birthday) }))
+    .filter((p) => p.days !== null && p.days <= 30)
+    .sort((a, b) => (a.days ?? 0) - (b.days ?? 0))
+    .slice(0, 10);
+
+  if (upcoming.length === 0) {
+    await sendMessage(chatId, "В ближайший месяц дней рождения нет 🎂");
+    return;
+  }
+
+  const lines = upcoming.map((p) => {
+    const when = p.days === 0 ? "сегодня" : p.days === 1 ? "завтра" : `через ${p.days} дн.`;
+    const extra = [p.music_app, p.instagram ? `@${p.instagram}` : null].filter(Boolean).join(" · ");
+    return [
+      `🎂 <b>${escapeHtml(p.full_name)}</b> (${escapeHtml(p.department ?? "LC")})`,
+      `   ${birthdayLabel(p.birthday)} - ${when}`,
+      extra ? `   ${escapeHtml(extra)}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  });
+
+  await sendMessage(chatId, ["🎉 <b>Ближайшие дни рождения</b>", "", ...lines].join("\n\n"));
+}
+
+/** Этапы назначения, по возрастанию порядка. */
+async function loadSteps(assignmentId: string): Promise<Step[]> {
+  const { data } = await supabaseAdmin
+    .from("assignment_steps")
+    .select("id, idx, title, done_at")
+    .eq("assignment_id", assignmentId)
+    .order("idx");
+  return (data ?? []) as Step[];
+}
+
+/** Перерисовывает сообщение задачи: либо обычный вид, либо экран выбора этапа. */
+async function renderTask(
+  chatId: number,
+  messageId: number,
+  assignmentId: string,
+  mode: "task" | "steps",
+) {
+  const { data } = await supabaseAdmin
+    .from("task_assignments")
+    .select("id, status, tasks:task_id ( title, description, deadline, teams:team_id ( name ) )")
+    .eq("id", assignmentId)
+    .maybeSingle();
+
+  const row = data as unknown as {
+    status: string;
+    tasks: {
+      title: string;
+      description: string | null;
+      deadline: string;
+      teams: { name: string } | null;
+    } | null;
+  } | null;
+  if (!row?.tasks) return;
+
+  const steps = await loadSteps(assignmentId);
+  const text = taskMessage({
+    title: row.tasks.title,
+    description: row.tasks.description,
+    teamName: row.tasks.teams?.name ?? "MXP",
+    deadline: row.tasks.deadline,
+    steps,
+  });
+
+  await editMessageText(
+    chatId,
+    messageId,
+    `${text}\n\n${STATUS_LINE[row.status] ?? ""}`,
+    mode === "steps"
+      ? stepsKeyboard(assignmentId, steps)
+      : keyboardFor(row.status, assignmentId, steps),
+  );
+}
+
+/** Отметить или снять этап. Доступно только тому, кому выдана джейдишка. */
+async function handleStepToggle(update: NonNullable<TgUpdate["callback_query"]>, stepId: string) {
+  const chatId = update.message?.chat.id ?? update.from.id;
+
+  const { data: step } = await supabaseAdmin
+    .from("assignment_steps")
+    .select("id, assignment_id, title, done_at")
+    .eq("id", stepId)
+    .maybeSingle();
+
+  if (!step) {
+    await answerCallbackQuery(update.id, "Этап не найден");
+    return;
+  }
+
+  const { data: owner } = await supabaseAdmin
+    .from("task_assignments")
+    .select("id, member_id, members:member_id ( telegram_chat_id )")
+    .eq("id", step.assignment_id)
+    .maybeSingle();
+
+  const ownerRow = owner as unknown as {
+    id: string;
+    member_id: string;
+    members: { telegram_chat_id: number | null } | null;
+  } | null;
+
+  if (!ownerRow || ownerRow.members?.telegram_chat_id !== chatId) {
+    await answerCallbackQuery(update.id, "Эта задача не твоя", true);
+    return;
+  }
+
+  const nextDone = !step.done_at;
+  await supabaseAdmin
+    .from("assignment_steps")
+    .update({ done_at: nextDone ? new Date().toISOString() : null })
+    .eq("id", stepId);
+
+  await logActivity(
+    step.assignment_id,
+    ownerRow.member_id,
+    `${nextDone ? "Отметил этап" : "Снял отметку с этапа"}: ${step.title}`,
+  );
+
+  if (update.message?.message_id) {
+    await renderTask(chatId, update.message.message_id, step.assignment_id, "steps");
+  }
+  await answerCallbackQuery(update.id, nextDone ? "Готово ☑️" : "Снял отметку");
 }
 
 /** Аккаунт сайта, стоящий за этим чатом: нужен, чтобы понять, кто принимает работу. */
@@ -291,13 +441,34 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
   const [action, assignmentId] = raw.split(":");
   const chatId = update.message?.chat.id ?? update.from.id;
 
-  if (!assignmentId || !["acc", "done", "help", "ok", "ret"].includes(action ?? "")) {
+  if (
+    !assignmentId ||
+    !["acc", "done", "help", "ok", "ret", "steps", "st", "bk"].includes(action ?? "")
+  ) {
     await answerCallbackQuery(update.id, "Неизвестное действие");
     return;
   }
 
   if (action === "ok" || action === "ret") {
     await handleReview(update, action === "ok", assignmentId);
+    return;
+  }
+
+  if (action === "st") {
+    await handleStepToggle(update, assignmentId);
+    return;
+  }
+
+  if (action === "steps" || action === "bk") {
+    if (update.message?.message_id) {
+      await renderTask(
+        chatId,
+        update.message.message_id,
+        assignmentId,
+        action === "steps" ? "steps" : "task",
+      );
+    }
+    await answerCallbackQuery(update.id, "");
     return;
   }
 
@@ -363,11 +534,13 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
     action === "acc" ? "Принял задачу" : action === "done" ? "Сдал на проверку" : "Запросил помощь",
   );
 
+  const currentSteps = await loadSteps(assignmentId);
   const baseText = taskMessage({
     title: row.tasks.title,
     description: row.tasks.description,
     teamName: row.tasks.teams?.name ?? "MXP",
     deadline: row.tasks.deadline,
+    steps: currentSteps,
   });
 
   const messageId = update.message?.message_id ?? row.telegram_message_id;
@@ -376,7 +549,7 @@ async function handleCallback(update: NonNullable<TgUpdate["callback_query"]>) {
       chatId,
       messageId,
       `${baseText}\n\n${STATUS_LINE[status]}`,
-      keyboardFor(status, assignmentId),
+      keyboardFor(status, assignmentId, currentSteps),
     );
   }
 
@@ -440,6 +613,8 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
               await handleStart(chatId, update.message.from, text.split(/\s+/)[1]);
             } else if (text.startsWith("/tasks")) {
               await handleTasks(chatId);
+            } else if (text.startsWith("/birthdays") || text.startsWith("/dr")) {
+              await handleBirthdays(chatId);
             } else if (text.startsWith("/help")) {
               await sendMessage(chatId, HELP_TEXT);
             } else {
