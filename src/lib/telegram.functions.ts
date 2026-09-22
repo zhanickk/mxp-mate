@@ -124,6 +124,68 @@ export const reviewAssignment = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+/**
+ * Удаляет задачи пачкой. Права проверяет сама база (VP удаляет любые, тимлид
+ * только свои), а мемберам в боте старое сообщение меняется на «задача отменена»,
+ * чтобы у них не висели кнопки от несуществующей задачи.
+ */
+export const deleteTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ task_ids: z.array(z.string().uuid()).min(1).max(200) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Сообщения в Telegram нужно собрать до удаления: назначения уйдут каскадом.
+    const { data: before } = await supabaseAdmin
+      .from("task_assignments")
+      .select(
+        "task_id, status, telegram_message_id, members:member_id ( telegram_chat_id ), tasks:task_id ( title )",
+      )
+      .in("task_id", data.task_ids);
+
+    const { data: deleted, error } = await context.supabase
+      .from("tasks")
+      .delete()
+      .in("id", data.task_ids)
+      .select("id");
+    if (error) throw new Error(error.message);
+
+    const deletedIds = new Set((deleted ?? []).map((r) => r.id));
+
+    const rows = (before ?? []) as unknown as Array<{
+      task_id: string;
+      status: string;
+      telegram_message_id: number | null;
+      members: { telegram_chat_id: number | null } | null;
+      tasks: { title: string } | null;
+    }>;
+
+    const { editMessageText, escapeHtml, sleep } = await import("./telegram.server");
+    let notified = 0;
+    for (const r of rows) {
+      if (!deletedIds.has(r.task_id)) continue;
+      if (r.status === "done") continue;
+      const chatId = r.members?.telegram_chat_id;
+      if (!chatId || !r.telegram_message_id) continue;
+      const res = await editMessageText(
+        chatId,
+        r.telegram_message_id,
+        `❌ <b>Задача отменена</b>\n\n«${escapeHtml(r.tasks?.title ?? "")}»\nДелать больше не нужно.`,
+        [],
+      );
+      if (res.ok) notified += 1;
+      await sleep(60);
+    }
+
+    return {
+      deleted: deletedIds.size,
+      skipped: data.task_ids.length - deletedIds.size,
+      notified,
+    };
+  });
+
 /** Bot health check: getMe + current webhook info. */
 export const getBotStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
