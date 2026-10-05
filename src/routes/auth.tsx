@@ -55,7 +55,11 @@ function AuthPage() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const login = email.trim();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: login.includes("@") ? login : `${login.toLowerCase()}@mxp.local`,
+      password,
+    });
     setBusy(false);
     if (error) {
       toast.error("Не удалось войти", { description: error.message });
@@ -115,10 +119,10 @@ function AuthPage() {
             <TabsContent value="signin">
               <form className="mt-5 space-y-4" onSubmit={signIn}>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email или логин</Label>
                   <Input
                     id="email"
-                    type="email"
+                    type="text"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
