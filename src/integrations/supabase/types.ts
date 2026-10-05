@@ -71,6 +71,80 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_steps: {
+        Row: {
+          assignment_id: string
+          done_at: string | null
+          id: string
+          idx: number
+          title: string
+        }
+        Insert: {
+          assignment_id: string
+          done_at?: string | null
+          id?: string
+          idx: number
+          title: string
+        }
+        Update: {
+          assignment_id?: string
+          done_at?: string | null
+          id?: string
+          idx?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_steps_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lc_people: {
+        Row: {
+          birthday: string | null
+          created_at: string
+          department: string | null
+          full_name: string
+          id: string
+          instagram: string | null
+          is_active: boolean
+          music_app: string | null
+          note: string | null
+          position: string | null
+          telegram_username: string | null
+        }
+        Insert: {
+          birthday?: string | null
+          created_at?: string
+          department?: string | null
+          full_name: string
+          id?: string
+          instagram?: string | null
+          is_active?: boolean
+          music_app?: string | null
+          note?: string | null
+          position?: string | null
+          telegram_username?: string | null
+        }
+        Update: {
+          birthday?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string
+          id?: string
+          instagram?: string | null
+          is_active?: boolean
+          music_app?: string | null
+          note?: string | null
+          position?: string | null
+          telegram_username?: string | null
+        }
+        Relationships: []
+      }
       members: {
         Row: {
           birthday: string | null
@@ -233,17 +307,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "task_assignments_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "task_assignments_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -288,80 +362,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      assignment_steps: {
-        Row: {
-          assignment_id: string
-          done_at: string | null
-          id: string
-          idx: number
-          title: string
-        }
-        Insert: {
-          assignment_id: string
-          done_at?: string | null
-          id?: string
-          idx: number
-          title: string
-        }
-        Update: {
-          assignment_id?: string
-          done_at?: string | null
-          id?: string
-          idx?: number
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "assignment_steps_assignment_id_fkey"
-            columns: ["assignment_id"]
-            isOneToOne: false
-            referencedRelation: "task_assignments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lc_people: {
-        Row: {
-          birthday: string | null
-          created_at: string
-          department: string | null
-          full_name: string
-          id: string
-          instagram: string | null
-          is_active: boolean
-          music_app: string | null
-          note: string | null
-          position: string | null
-          telegram_username: string | null
-        }
-        Insert: {
-          birthday?: string | null
-          created_at?: string
-          department?: string | null
-          full_name: string
-          id?: string
-          instagram?: string | null
-          is_active?: boolean
-          music_app?: string | null
-          note?: string | null
-          position?: string | null
-          telegram_username?: string | null
-        }
-        Update: {
-          birthday?: string | null
-          created_at?: string
-          department?: string | null
-          full_name?: string
-          id?: string
-          instagram?: string | null
-          is_active?: boolean
-          music_app?: string | null
-          note?: string | null
-          position?: string | null
-          telegram_username?: string | null
-        }
-        Relationships: []
       }
       tasks: {
         Row: {
@@ -410,6 +410,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_birthday_person_id_fkey"
+            columns: ["birthday_person_id"]
+            isOneToOne: false
+            referencedRelation: "lc_people"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_created_by_fkey"
             columns: ["created_by"]
@@ -483,6 +490,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      call_cron_tick: { Args: never; Returns: undefined }
+      can_review_assignment: {
+        Args: { _assignment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      claim_position: {
+        Args: { _code: string; _member_id: string }
+        Returns: undefined
+      }
       ensure_profile: {
         Args: { _email?: string; _full_name?: string }
         Returns: {
@@ -510,22 +526,16 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
-      can_review_assignment: {
-        Args: { _assignment_id: string; _user_id: string }
-        Returns: boolean
-      }
-      claim_position: { Args: { _code: string; _member_id: string }; Returns: undefined }
       member_claim_preview: {
         Args: { _code: string; _member_id: string }
         Returns: {
           already_claimed: boolean
           full_name: string
           position: Database["public"]["Enums"]["member_position"]
-          team_name: string | null
+          team_name: string
         }[]
       }
       my_member_id: { Args: never; Returns: string }
-      toggle_step: { Args: { _done: boolean; _step_id: string }; Returns: undefined }
       my_team_id: { Args: never; Returns: string }
       review_assignment: {
         Args: { _approve: boolean; _assignment_id: string; _comment?: string }
@@ -538,6 +548,10 @@ export type Database = {
           _team_id?: string
           _user_id: string
         }
+        Returns: undefined
+      }
+      toggle_step: {
+        Args: { _done: boolean; _step_id: string }
         Returns: undefined
       }
     }
